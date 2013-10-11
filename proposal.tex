@@ -37,14 +37,15 @@
 % This command causes the title to be created in the document
 
 \section{Goals}
-This project is motivated by the task of early prediction of septic shock in ICU patients, using multiples streams of physiologic data. 
+This project is motivated by the task of early prediction of septic shock in ICU patients, using multiple streams of continuous physiological data. 
 We will investigate this problem through the development of three interacting components:
 1) Create a Deep Neural Network (DNN) famework to provide probability estimates of whether a patient develops septic shock (David Snyder),
 2) Uncover features that explain phenomena observed in our data using Topic Modeling (Adi Renduchintala) and
-3) Derive an appropriate policy for optimal decision making using the above components (Katie Henry).
+3) Derive an optimal decision policy using the above components that is aware of when making a prediction is more costly than delaying prediction until more data has been observed (Katie Henry).
 
 
 \section{Data}
+MIMIC II Waveform Database is a collection of continuous physiological waveforms from patients in the ICU. This includes ECG, blood pressure, oxygen saturation, and pulse readings measured at 125 Hz. Using the subset of these waveforms that have been associated with electronical medical records, we are able to identify patients who have septic shock and the time of onset of septic shock. In all there are 168 waveform records and 4814 hours of data that cover some portion of the three days preceding septic shock onset. On average the records contain information about thirty hours prior to septic shock onset.
 
 \section{Approach}
 
@@ -61,7 +62,14 @@ Although sceptic shock is often labeled as a single condition it is known (citat
 Furthermore, each variation is preceded by a mixture of different events which lead to the onset of the condition. Because of the variation in underlying structure
 of this problem we believe that topic modeling may result in discovering features which reflect this variation and result in more explanatory features. Topic models have been used extensively for physiological signals in the time domain (citation). Typically these features have been generated from a single time series. In our data set we have access to multiple channels of data for each patient. We would like to extend our feature generation to include multiple channels and interaction between channels. 
 
-\subsection{Optimal Decision Making with Katie's stuff}
+\subsection{Towards Reliable Prediction}
+In a clinical setting, it can be more harmful for a system to make an incorrect prediction than to make any prediction at all and a clinician might want to have more fine-grainied control of the costs of false negatives and false positives for different disease states. In order to incorporate these concerns, we propose to derive an optimal decision policy over the time sequence that can either predict a disease class (e.g.\ septic shock or not septic shock) or can refuse to make any prediction and that allows the clinician to specify arbitrary costs of different decisions.
+
+\section{Previous Work}
+Previous work has shown that measurements derived from continuous physiological data are useful in disease prediction and risk stratification tasks. Clinical studies have shown that in healthy patients heart rates have a multifractal pattern over time and that there is a loss of complexity in the heart rate signal in patients with heart disease (cite Goldberger). Previous reserearch has used features like heart rate variability, sample asymmetry, detrended fluctuation analysis, and approximate entropy to caputure this loss in complexity and to characterize the waveform in addition to other features motivated by clinical knowledge and observations (cite Moorman and Clifford).  There has also been some work on automatically learning repeating motifs and shape signatures in  the waveform and using these to classify patients' health status (cite Seyed and Saria); however, these approaches still focus on each signal in isolation.
+
+
+
 \begin{thebibliography}{99}
 \bibitem{saria2010} S. Saria, 
 A. Rajani, 
