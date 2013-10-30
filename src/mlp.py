@@ -79,7 +79,9 @@ def main():
   n_hidden = 2
   n_output = 1
   mlp = MLP(n_input, n_hidden, n_output)
-  n_epochs = 5 # Just for testing that learning happens
+  n_epochs = 5 
+  # For testing that learning happens...
+  # with a toy function eg, f(1,0) = 0.
   for i in range(0, n_epochs):
     X = np.array([1, 0])
     mlp.forwards(X)
