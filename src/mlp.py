@@ -4,7 +4,7 @@ from scipy.stats import logistic
 import math
 
 def get_datasets():
-  root = "../"
+  root = "../../"
   sepshock_root = root + "features/sepshock/"
   sevsep_root = root + "features/sevsep/"
   sirs_root = root + "features/sirs/"
@@ -12,16 +12,19 @@ def get_datasets():
   dev_map = root + "devset.recs"
   
   # Make training and dev data
-  mins, maxs = get_mins_maxes(train_map)
-  trainset = scale_features(get_data(train_map), mins, maxs)
+  trainset = get_data(train_map)
+  mins, maxs = get_mins_maxes(trainset)
+  trainset = scale_features(trainset, mins, maxs)
   devset = scale_features(get_data(dev_map), mins, maxs)
 
 def get_mins_maxes(dataset):
   # Find the mins and maxes for 
   # each feature and rescale
+  print "dataset = " + str(dataset)
   mins = dataset[0][0]
   maxs = dataset[0][0]
   for x in dataset:
+    print "x = "  +  str(x)
     d = x[0]
     for i in range(0, len(d)):
       if d[i] < mins[i]:
@@ -32,7 +35,7 @@ def get_mins_maxes(dataset):
 
 def scale_features(dataset, mins, maxs):
   for i in range(0, len(dataset)):
-    for j in range(0, len(dataset[i]):
+    for j in range(0, len(dataset[i])):
       dataset[i][j] = (dataset[i][j] - mins[j]) / (maxs[j] - mins[j])
   return dataset
   
@@ -40,25 +43,29 @@ def scale_features(dataset, mins, maxs):
 def get_data(record_map):
   f = open(record_map, 'r')
   dataset = []
-  contents = f.read()
+  contents = f.read().split("\n")
   f.close()
   for line in contents:
     # Determine if sirs, septic shock, or severe sepsis
+    print "line = " + str(line)
     toks = line.split()
+    if len(toks) < 3:
+      continue
+    print "toks = " + str(toks)
     cl = None  # To make things simple (for now) sirs is class 0
                # septic shock and severe sepsis is 1
     data = None
-    if toks[2] = "1": # sirs
+    if toks[2] == "1": # sirs
       f = open(sirs_root + toks[2], 'r')
       data = f.read()
       f.close()
       cl = 0
-    elif toks[2] = "3": # septic shock
+    elif toks[2] == "3": # septic shock
       f = open(sepshock_root + toks[2], 'r')
       data = f.read()
       f.close()
       cl = 1
-    elif toks[2] = "4": # severe sepsis
+    elif toks[2] == "4": # severe sepsis
       f = open(sevsep_root + toks[2], 'r')
       data = f.read()
       f.close()
@@ -72,7 +79,7 @@ def get_data(record_map):
 
 class MLP:
   def __init__(self, n_input, n_hidden, n_output, eta=1):
-
+    trainset, devset = get_datasets()
     self.n_input = n_input
     self.n_hidden = n_hidden
     self.n_output = n_output
