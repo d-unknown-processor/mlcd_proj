@@ -11,10 +11,31 @@ def get_datasets():
   train_map = root + "trainset.recs"
   dev_map = root + "devset.recs"
   
-  trainset = get_data(train_map)
-  devset = get_data(dev_map)
+  # Make training and dev data
+  mins, maxs = get_mins_maxes(train_map)
+  trainset = scale_features(get_data(train_map), mins, maxs)
+  devset = scale_features(get_data(dev_map), mins, maxs)
 
-  # Make training data
+def get_mins_maxes(dataset):
+  # Find the mins and maxes for 
+  # each feature and rescale
+  mins = dataset[0][0]
+  maxs = dataset[0][0]
+  for x in dataset:
+    d = x[0]
+    for i in range(0, len(d)):
+      if d[i] < mins[i]:
+        mins[i] = d[i]
+      if d[i] > maxs[i]:
+        maxs[i] = d[i]
+  return mins, maxs 
+
+def scale_features(dataset, mins, maxs):
+  for i in range(0, len(dataset)):
+    for j in range(0, len(dataset[i]):
+      dataset[i][j] = (dataset[i][j] - mins[j]) / (maxs[j] - mins[j])
+  return dataset
+  
 
 def get_data(record_map):
   f = open(record_map, 'r')
