@@ -1,18 +1,14 @@
 import numpy as np
 from scipy import linalg as lin
 from scipy.stats import logistic
+import math
 
 class MLP:
   def __init__(self, n_input, n_hidden, n_output, eta=1):
 
-    # At least for MLP, doesn't seem like we actually need persistent nodes.
-    #self.input_nodes = np.zeros(n_input )
-    #self.hidden_nodes = np.zeros(n_hidden)
-    #self.output_nodes = np.zeros(n_output)
     self.n_input = n_input
     self.n_hidden = n_hidden
     self.n_output = n_output
-
     weights = []
     for i in range(n_input + 1):
       weights.append(np.random.uniform(-1, 1, size=(n_hidden)))
@@ -21,61 +17,73 @@ class MLP:
     for i in range(n_hidden + 1):
       weights.append(np.random.uniform(-1, 1, size=(n_output)))
     self.W = np.array(weights)
-    self.A = None # Result of V * X^T
-    self.Y = None # Result of W * A^T
-    self.eta = 1
+    self.A = None # Result of X * V
+    self.Y = None # Result of A * W
+    self.eta = eta
  
   def set_learning_rate(eta):
     self.eta = eta
 
   def forwards(self, X):
-    np.append(X, -1)
-    print "X = " + str(X)
-    print "V = " + str(self.V)
-    A = self.g(self.V.dot(X.T))
-    print "A = " + str(A)
-    print "W = " + str(self.W)
-    Y = self.g(self.W.T.dot(A.T))
+    X = np.append(X, 1)  # A bias used by each of the hidden nodes
+    A = self.g(X.dot(self.V))
+    A = np.append(A, 1) # Bias for each output node
     self.A = A
+    Y = self.g(A.dot(self.W))
     self.Y = Y
-    print "Y = " + str(Y)
 
   def backwards(self, T, X):
+    X = np.append(X, 1)  # A bias used by each of the hidden nodes
+    
+    # Compute error d_o  at output
     d_o = T - self.Y
     for i in range(0, len(d_o)):
       d_o[i] *= self.Y[i] * (1 - self.Y[i])
-    print "d_o = " + str(d_o)
+
+    # Compute error d_h at hidden
     d_h = np.array(self.A, copy=True)
     for i in range(0, len(d_h)):
       v = 0
       for j in range(0, len(d_o)):
         v += self.W[i][j] * d_o[j]
       d_h[i] *= (1 - self.A[i]) * v
-    print "d_h = " + str(d_h)
-    
+   
+    # Update weights from hidden to output
+    W = []
     for i in range(0, len(self.W)):
+      w = []
       for j in range(0, len(self.W[i])):
-        self.W[i][j] += self.eta * d_o[j] * self.A[i]
+        w.append(self.W[i][j] + self.eta * d_o[j] * self.A[i])
+      W.append(w)
+    self.W = np.array(W) 
 
+    # Update weights from input to hidden
+    V = []
     for i in range(0, len(self.V)):
+      v = []
       for j in range(0, len(self.V[i])):
-        self.V[i][j] += self.eta * d_h[i] * X[j]
-    
-    print "V = " + str(self.V)
-    print "W = " + str(self.W)
+        v.append(self.V[i][j] + self.eta * d_h[j] * X[i])
+      V.append(v)
+    self.V = np.array(V)
 
+  # Here g is a logistic function
   def g(self, A):
-    return logistic.pdf(A)
-    
-
+    B = []
+    for i in range(0, len(A)):
+      b = 1.0/(1.0 + math.exp(-A[i]))
+      B.append(b)
+    return np.array(B)
 
 def main():
-  mlp = MLP(2, 2, 2)
-  X = np.array([1, 0])
-  mlp.forwards(X)
-  T = np.array([1, 0])
-  mlp.backwards(T, X)
-
+  n_input = 2
+  n_hidden = 2
+  n_output = 1
+  mlp = MLP(n_input, n_hidden, n_output)
+  for i in range(0, n_epochs):
+    X = np.array([1, 0])
+    mlp.forwards(X)
+    T = np.array([0])
+    mlp.backwards(T, X)
 
 if __name__ == "__main__":
   main()
