@@ -1,0 +1,8 @@
+Features:
+
+standard deviation
+slow DFA (see dfapeng.m in toolkit)
+fast DFA
+sample asymmetry skew to the left (see Moorman et al)
+sample asymmetry skew to the right
+the remaining ones are the sample entropy for M=0...4 (see summary on physionet)
