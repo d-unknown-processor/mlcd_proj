@@ -35,12 +35,12 @@ class MLP:
   def backwards(self, T, X):
     X = np.append(X, 1)  # A bias used by each of the hidden nodes
     
-    # Compute error d_o  at output
+    # Compute error and derivative d_o at output
     d_o = T - self.Y
     for i in range(0, len(d_o)):
       d_o[i] *= self.Y[i] * (1 - self.Y[i])
 
-    # Compute error d_h at hidden
+    # Compute error and derivative d_h at hidden
     d_h = np.array(self.A, copy=True)
     for i in range(0, len(d_h)):
       v = 0
