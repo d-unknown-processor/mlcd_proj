@@ -15,17 +15,17 @@ def get_mean():
     if len(toks) < 3:
       continue
     data = None
-    if toks[2] == "4": # sirs
+    if toks[2] == "1": # sirs
       f = open(sirs_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl = 0
-    elif toks[2] == "3": # septic shock
+    elif toks[2] == "4": # septic shock
       f = open(sepshock_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl = 1
-    elif toks[2] == "1": # severe sepsis
+    elif toks[2] == "3": # severe sepsis
       f = open(sevsep_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
@@ -53,17 +53,17 @@ def get_variance(means, count):
     if len(toks) < 3:
       continue
     data = None
-    if toks[2] == "4": # sirs
+    if toks[2] == "1": # sirs
       f = open(sirs_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl = 0
-    elif toks[2] == "3": # septic shock
+    elif toks[2] == "4": # septic shock
       f = open(sepshock_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl = 1
-    elif toks[2] == "1": # severe sepsis
+    elif toks[2] == "3": # severe sepsis
       f = open(sevsep_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
