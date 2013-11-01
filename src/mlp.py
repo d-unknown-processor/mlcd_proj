@@ -3,13 +3,15 @@ from scipy import linalg as lin
 from scipy.stats import logistic
 import math
 
+root = "../../"
+sepshock_root = root + "features/sepshock/"
+sevsep_root = root + "features/sevsep/"
+sirs_root = root + "features/sirs/"
+train_map = root + "trainset.recs"
+dev_map = root + "devset.recs"
+
 def get_datasets():
   root = "../../"
-  sepshock_root = root + "features/sepshock/"
-  sevsep_root = root + "features/sevsep/"
-  sirs_root = root + "features/sirs/"
-  train_map = root + "trainset.recs"
-  dev_map = root + "devset.recs"
   
   # Make training and dev data
   trainset = get_data(train_map)
@@ -56,25 +58,27 @@ def get_data(record_map):
                # septic shock and severe sepsis is 1
     data = None
     if toks[2] == "1": # sirs
-      f = open(sirs_root + toks[2], 'r')
+      f = open(sirs_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl = 0
-    elif toks[2] == "3": # septic shock
-      f = open(sepshock_root + toks[2], 'r')
+    elif toks[2] == "4": # septic shock
+      f = open(sepshock_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl = 1
-    elif toks[2] == "4": # severe sepsis
-      f = open(sevsep_root + toks[2], 'r')
+    elif toks[2] == "3": # severe sepsis
+      f = open(sevsep_root + toks[0] + ".feats", 'r')
       data = f.read()
       f.close()
       cl =1
     else:
       print "This shouldn't happen"
-    for l in data:
-      features = [float(x) for x in s.split()]
-      dataset.append(features, cl)
+    print data
+    for l in data.split():
+      features = [float(x) for x in l.split()]
+      dataset.append((features, cl))
+  print dataset
   return dataset
 
 class MLP:
