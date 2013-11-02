@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.ma as ma
+import sys
 
 root = "../../"
 sepshock_root = root + "features/sepshock/"
@@ -9,14 +10,17 @@ train_map = root + "trainset.recs"
 
 
 def get_mean():
+    print 'accumilating means...'
     count = 0
     cumilative_sums = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     sums = {'f0': 0, 'f1': 0, 'f2': 0, 'f3': 0, 'f4': 0, 'f5': 0, 'f6': 0, 'f7': 0, 'f8': 0}
     f = open(train_map, 'r')
 
     for line in f:
+        sys.stderr.write('.')
         toks = line.split()
         if len(toks) < 3:
+            filepath = ''
             continue
             #data = None
         if toks[2] == "1": # sirs
@@ -38,11 +42,11 @@ def get_mean():
             #f.close()
         else:
             print "Unidentified class"
-
-        dt = np.loadtxt(filepath)
-        mdt = ma.masked_invalid(dt)
-        sum = np.sum(mdt, axis=0)
-        cumilative_sums = cumilative_sums + sum
+        if filepath != '':
+            dt = np.loadtxt(filepath)
+            mdt = ma.masked_invalid(dt)
+            sum = np.sum(mdt, axis=0)
+            cumilative_sums = cumilative_sums + sum
         '''
         for l in data.split('\n'):
           features = [float(x) for x in l.split()]
@@ -61,12 +65,15 @@ def get_mean():
 
 
 def get_variance(means, count):
+    print 'accumilating squared diffs'
     squared_diffs = {'f0': 0, 'f1': 0, 'f2': 0, 'f3': 0, 'f4': 0, 'f5': 0, 'f6': 0, 'f7': 0, 'f8': 0}
     cumilative_squared_diff = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     f = open(train_map, 'r')
     for line in f:
+        sys.stderr.write('.')
         toks = line.split()
         if len(toks) < 3:
+            filepath = ''
             continue
             #data = None
         if toks[2] == "1": # sirs
@@ -88,13 +95,14 @@ def get_variance(means, count):
             #f.close()
         else:
             print "Unidentified class"
-        dt = np.loadtxt(filepath)
-        mdt = ma.masked_invalid(dt)
-        means = np.array(means)
-        mdt = mdt - means
-        mdt = np.square(mdt)
-        sum = np.sum(mdt, axis=0)
-        cumilative_squared_diff = cumilative_squared_diff + sum
+        if filepath!= '':
+            dt = np.loadtxt(filepath)
+            mdt = ma.masked_invalid(dt)
+            means = np.array(means)
+            mdt = mdt - means
+            mdt = np.square(mdt)
+            sum = np.sum(mdt, axis=0)
+            cumilative_squared_diff = cumilative_squared_diff + sum
     '''
     for line in f:
       toks = line.split()
@@ -134,9 +142,10 @@ def get_variance(means, count):
 
 def main():
     means, count = get_mean()
-    variances = get_variance(means, count)
     print "count = " + str(count)
     print "means = " + str(means)
+    variances = get_variance(means, count)
+
     print "var = " + str(variances)
 
 
