@@ -3,87 +3,8 @@ from scipy import linalg as lin
 from scipy.stats import logistic
 import math
 
-root = "../../"
-sepshock_root = root + "features/sepshock/"
-sevsep_root = root + "features/sevsep/"
-sirs_root = root + "features/sirs/"
-train_map = root + "trainset.recs"
-dev_map = root + "devset.recs"
-
-def get_datasets():
-  root = "../../"
-  
-  # Make training and dev data
-  trainset = get_data(train_map)
-  mins, maxs = get_mins_maxes(trainset)
-  trainset = scale_features(trainset, mins, maxs)
-  devset = scale_features(get_data(dev_map), mins, maxs)
-
-def get_mins_maxes(dataset):
-  # Find the mins and maxes for 
-  # each feature and rescale
-  print "dataset = " + str(dataset)
-  mins = dataset[0][0]
-  maxs = dataset[0][0]
-  for x in dataset:
-    print "x = "  +  str(x)
-    d = x[0]
-    for i in range(0, len(d)):
-      if d[i] < mins[i]:
-        mins[i] = d[i]
-      if d[i] > maxs[i]:
-        maxs[i] = d[i]
-  return mins, maxs 
-
-def scale_features(dataset, mins, maxs):
-  for i in range(0, len(dataset)):
-    for j in range(0, len(dataset[i])):
-      dataset[i][j] = (dataset[i][j] - mins[j]) / (maxs[j] - mins[j])
-  return dataset
-  
-
-def get_data(record_map):
-  f = open(record_map, 'r')
-  dataset = []
-  contents = f.read().split("\n")
-  f.close()
-  for line in contents:
-    # Determine if sirs, septic shock, or severe sepsis
-    print "line = " + str(line)
-    toks = line.split()
-    if len(toks) < 3:
-      continue
-    print "toks = " + str(toks)
-    cl = None  # To make things simple (for now) sirs is class 0
-               # septic shock and severe sepsis is 1
-    data = None
-    if toks[2] == "1": # sirs
-      f = open(sirs_root + toks[0] + ".feats", 'r')
-      data = f.read()
-      f.close()
-      cl = 0
-    elif toks[2] == "4": # septic shock
-      f = open(sepshock_root + toks[0] + ".feats", 'r')
-      data = f.read()
-      f.close()
-      cl = 1
-    elif toks[2] == "3": # severe sepsis
-      f = open(sevsep_root + toks[0] + ".feats", 'r')
-      data = f.read()
-      f.close()
-      cl =1
-    else:
-      print "This shouldn't happen"
-    print data
-    for l in data.split():
-      features = [float(x) for x in l.split()]
-      dataset.append((features, cl))
-  print dataset
-  return dataset
-
 class MLP:
   def __init__(self, n_input, n_hidden, n_output, eta=1):
-    trainset, devset = get_datasets()
     self.n_input = n_input
     self.n_hidden = n_hidden
     self.n_output = n_output
