@@ -25,12 +25,13 @@ def get_data():
   f.close()
   return training, dev
 
-class HiddenLayer:
-  def __init__(self, n_input, n_output):
+class Layer:
+  def __init__(self, n_input, n_output, id):
     self.n_input = n_input
     self.n_output = n_output
     self.W = self.init_weights()
-    self.X = None
+    self.X = None # Input
+    self.id = id 
 
   def init_weights(self):
     weights = []
@@ -58,6 +59,7 @@ class HiddenLayer:
         w.append(self.W[i][j] + eta * d_o[j] * self.X[i])
       W.append(w)
     self.W = np.array(W)
+    print str(self.id) + " W: " + str(self.W[0][0])
 
   def get_error(self, T):
     # Compute error and derivative d_o at output
@@ -86,19 +88,19 @@ class MLP:
     self.eta = eta
     
     self.layers = []
-    self.layers.append(HiddenLayer(n_input, n_hidden))
+    self.layers.append(Layer(n_input, n_hidden, 0))
     for i in range(1, num_hidden_layers):
-      self.layers.append(HiddenLayer(n_hidden, n_hidden))
-    self.output_layer = HiddenLayer(n_hidden, n_output)
+      self.layers.append(Layer(n_hidden, n_hidden, i))
+    self.output_layer = Layer(n_hidden, n_output, num_hidden_layers)
 
   def forwards(self, X):
-    print "X at beginning of forwards = " + str(X)
+    #print "X at beginning of forwards = " + str(X)
     # Propogate input through each layer
     for layer in self.layers:
       X = layer.get_output(X)
-      print "X in forwards loop = " + str(X)
+      #print "X in forwards loop = " + str(X)
     O = self.output_layer.get_output(X)
-    print "O = " + str(O)
+    #print "O = " + str(O)
 
   def backwards(self, T, X):
     d_o = self.output_layer.get_error(T)
@@ -113,14 +115,12 @@ class MLP:
 
 def main():
   training, dev = get_data()
-  print "training = " + str(training)
-  print "dev = " + str(dev)
   n_input = 5
-  n_hidden = 5
+  n_hidden = 6
   n_output = 1
   num_hidden_layers = 3
   mlp = MLP(n_input, num_hidden_layers, n_hidden, n_output)
-  n_epochs = 3000
+  n_epochs = 1000
   # For testing that learning happens...
   # with a toy function eg, f(1,0) = 0.
   for i in range(0, n_epochs):
