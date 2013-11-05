@@ -24,77 +24,92 @@ def get_data():
     dev.append((xs, y))
   f.close()
   return training, dev
- 
-class MLP:
-  def __init__(self, n_input, n_hidden, n_output, eta=1):
+
+class HiddenLayer:
+  def __init__(self, n_input, n_output):
     self.n_input = n_input
-    self.n_hidden = n_hidden
     self.n_output = n_output
-    weights = []
-    for i in range(n_input + 1):
-      weights.append(np.random.uniform(-1, 1, size=(n_hidden)))
-    self.V = np.array(weights)
-    weights = []
-    for i in range(n_hidden + 1):
-      weights.append(np.random.uniform(-1, 1, size=(n_output)))
-    self.W = np.array(weights)
-    self.A = None # Result of X * V
-    self.Y = None # Result of A * W
-    self.eta = eta
- 
-  def set_learning_rate(eta):
-    self.eta = eta
+    self.W = self.init_weights()
+    self.X = None
 
-  def forwards(self, X):
-    X = np.append(X, 1)  # A bias used by each of the hidden nodes
-    A = self.g(X.dot(self.V))
-    A = np.append(A, 1) # Bias for each output node
-    self.A = A
-    Y = self.g(A.dot(self.W))
-    self.Y = Y
-  
-  def backwards(self, T, X):
-    X = np.append(X, 1)  # A bias used by each of the hidden nodes
-    
-    # Compute error and derivative d_o at output
-    d_o = T - self.Y
-    print d_o
-    for i in range(0, len(d_o)):
-      d_o[i] *= self.Y[i] * (1 - self.Y[i])
+  def init_weights(self):
+    weights = []
+    for i in range(self.n_input + 1):
+      weights.append(np.random.uniform(-1, 1, size=(self.n_output)))
+    return np.array(weights)
 
-    # Compute error and derivative d_h at hidden
-    d_h = np.array(self.A, copy=True)
-    for i in range(0, len(d_h)):
-      v = 0
-      for j in range(0, len(d_o)):
-        v += self.W[i][j] * d_o[j]
-      d_h[i] *= (1 - self.A[i]) * v
+  # Here g is a logistic function
+  def g(self, x):
+   return 1.0/(1.0 + math.exp(-x))
    
-    # Update weights from hidden to output
+  def get_output(self, X):
+    X = np.append(np.array(X, copy=True), 1)
+    self.X = X
+    activation = np.vectorize(self.g)
+    A = X.dot(self.W)
+    self.output = activation(A)
+    return self.output
+
+  def update_weights(self, eta, d_o):
     W = []
     for i in range(0, len(self.W)):
       w = []
       for j in range(0, len(self.W[i])):
-        w.append(self.W[i][j] + self.eta * d_o[j] * self.A[i])
+        w.append(self.W[i][j] + eta * d_o[j] * self.X[i])
       W.append(w)
-    self.W = np.array(W) 
+    self.W = np.array(W)
 
-    # Update weights from input to hidden
-    V = []
-    for i in range(0, len(self.V)):
-      v = []
-      for j in range(0, len(self.V[i])):
-        v.append(self.V[i][j] + self.eta * d_h[j] * X[i])
-      V.append(v)
-    self.V = np.array(V)
+  def get_error(self, T):
+    # Compute error and derivative d_o at output
+    d_o = T - self.output
+    for i in range(0, len(d_o)):
+      d_o[i] *= self.output[i] * (1 - self.output[i])
+    return d_o
+  
+  # V is the weight matrix for the layer which succeeds this one
+  def compute_derivative(self, d_o, V):
+    # Compute error and derivative d_h at hidden
+    d_h = np.array(self.output, copy=True)
+    for i in range(0, len(d_h)):
+      v = 0
+      for j in range(0, len(d_o)):
+        v += V[i][j] * d_o[j]
+      d_h[i] *= (1 - self.output[i]) * v
+    return d_h
+   
 
-  # Here g is a logistic function
-  def g(self, A):
-    B = []
-    for i in range(0, len(A)):
-      b = 1.0/(1.0 + math.exp(-A[i]))
-      B.append(b)
-    return np.array(B)
+class MLP:
+  def __init__(self, n_input, num_hidden_layers, n_hidden, n_output, eta=1):
+    self.n_input = n_input
+    self.n_num_hidden_layers = num_hidden_layers
+    self.n_output = n_output
+    self.eta = eta
+    
+    self.layers = []
+    self.layers.append(HiddenLayer(n_input, n_hidden))
+    for i in range(1, num_hidden_layers):
+      self.layers.append(HiddenLayer(n_hidden, n_hidden))
+    self.output_layer = HiddenLayer(n_hidden, n_output)
+
+  def forwards(self, X):
+    print "X at beginning of forwards = " + str(X)
+    # Propogate input through each layer
+    for layer in self.layers:
+      X = layer.get_output(X)
+      print "X in forwards loop = " + str(X)
+    O = self.output_layer.get_output(X)
+    print "O = " + str(O)
+
+  def backwards(self, T, X):
+    d_o = self.output_layer.get_error(T)
+    self.output_layer.update_weights(self.eta, d_o)
+    prev_layer = self.output_layer
+    X = np.append(X, 1)
+    for i in range(1, len(self.layers)+1):
+      idx = len(self.layers) - i
+      d_o = self.layers[idx].compute_derivative(d_o, prev_layer.W)
+      prev_layer = self.layers[idx-1]
+      self.layers[idx].update_weights(self.eta, d_o)
 
 def main():
   training, dev = get_data()
@@ -103,8 +118,9 @@ def main():
   n_input = 5
   n_hidden = 5
   n_output = 1
-  mlp = MLP(n_input, n_hidden, n_output)
-  n_epochs = 1000 
+  num_hidden_layers = 3
+  mlp = MLP(n_input, num_hidden_layers, n_hidden, n_output)
+  n_epochs = 3000
   # For testing that learning happens...
   # with a toy function eg, f(1,0) = 0.
   for i in range(0, n_epochs):
