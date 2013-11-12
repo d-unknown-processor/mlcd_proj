@@ -28,21 +28,27 @@ def get_data():
     data = None
     cl = None
     try:
+      # Currently setting sirs = -1 and septic shock or severe sepsis = 1.
+      # We will probably want to separate out the previous two classes.
+      # Also, we should probably take into account the time to the condition
+      # Eg, what is the probability of sepsis in n hours from now.
+      # The current approach is quite naive, simply classifying physiological data at 
+      # any timestep as class 1 or -1.
       if toks[2] == "1": # sirs
         f = open(sirs_root + toks[0] + ".feats", 'r')
         data = f.read()
         f.close()
-        cl = 1
+        cl = -1
       elif toks[2] == "4": # septic shock
         f = open(sepshock_root + toks[0] + ".feats", 'r')
         data = f.read()
         f.close()
-        cl = 4
+        cl = 1
       elif toks[2] == "3": # severe sepsis
         f = open(sevsep_root + toks[0] + ".feats", 'r')
         data = f.read()
         f.close()
-        cl = 3
+        cl = 1
       else:
         sys.stderr.write("Unidentified class")
         continue
@@ -66,6 +72,7 @@ def get_data():
           xs.append(0.0)
         else:
           x = float(raw_xs[i])
+          # TODO: Also rescale
           xs.append((x - means[i])/math.sqrt(variances[i]))
       print xs
       training_x.append((xs, cl))
@@ -84,11 +91,12 @@ def main():
   n_epochs = 100
   for i in range(0, n_epochs):
     random.shuffle(training)
-    for xs, y in training: 
-      X = np.array(xs)
-      mlp.forwards(X)
-      T = np.array(y)
-      mlp.backwards(T, X)
+    for training_example:
+      for xs, y in training_example: 
+        X = np.array(xs)
+        mlp.forwards(X)
+        T = np.array(y)
+        mlp.backwards(T, X)
 
 if __name__ == "__main__":
   main()
