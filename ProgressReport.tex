@@ -193,6 +193,7 @@
 
 \setlength{\parindent}{0pt}
 
+The overall goal of this project is to develop a method for early detection of septic shock using continuous physiological data. We divide the problem into three parts: use topic modeling to learn features from the physiological data, derive a decision policy to decide what if any state the system should predict, and use a neural network to estimate the posterior probabilities for each state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%Here is where the actual math begins%%%%%%%%%%%%
@@ -282,6 +283,8 @@ For the task of sepsis prediction and continuous patient monitoring in general, 
 In order to test the reliable classification, we generate synthetic data from four overlapping Gaussians, where each Gaussian corresponds to a different class.
 
 We use Kevin Murphy's BayesNet and CRF Matlab toolkits to implement a model to compute $\hat{Y}$ for the synthetic data. We then use these marginal probabilities at each time step to implement the learning problem as described below. For the simulation we do address the situation where we have a doctor intervention (i.e.\ $R=\emptyset$). 
+
+We will consider how different parameterizations of the cost matrix allow us to trade off between the cost of misclassification and the cost of refusing to predict. We will also investigate how to set the cost matrix to encourage early detection.
 
 \subsection{Learning Problem}
 Our goal is to learn a decision policy that allows us to minimize the expected loss over the entire time sequence of observations.
