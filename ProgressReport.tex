@@ -6,7 +6,7 @@
 \documentclass[12pt,solutions]{article}
 
 %%%Here you should replace my name with your name
-\newcommand{\prof}{Katie Henry}
+\newcommand{\prof}{Katie Henry \\ David Snyder}
 %%%Make this your course number than leave it alone
 \newcommand{\subj}{}
 %%%Change the number 1 to which problem set you're on
@@ -273,8 +273,60 @@ From this we see that the system will either make the decision $u_T = c \in \bar
 
 Computing the expected loss with dynamic programming, where we maintain a vector of the class costs from the previous time step, requires $C(C+1)+4$ operations at each time point, so the overall complexity is $O(TC^2)$. For space efficiency, it is only necessary to maintain the cost vector from the previous time step.
 
+\setcounter{section}{3}
+\section{Neural Networks for Posterior Estimation}
+
+\subsection{Problem Definition}
+The goal of this project is to train Deep Neural Networks (DNN) to estimate the probability of developing a disease state given a sequence of
+physiological data. Here, the task is early prediction of septic shock in ICU patients with a documented infection. Heart rate is used as input to
+the DNN. We will estimate the probability of an ICU patient developing a form of sepsis $P(sepsis \mid S)$ where $S$ is window into the 
+heart rate timeseries. DNNs have produced state of the art performance in a number of domains. The paradigm gains efficacy over traditional neural networks in part due to its ability to extract multiple layers of features during its unsupervised pretraining. Onset of sespsis is believed to be preceded by reduced complexity of the cardiac waveform, one such highlevel predictor of the disease we speculate that the neural network may learn. 
+
+\subsection{Related Work}
+
+At present, deep learning the task of sepsis prediction appears relatively unexplored. However, these techniques have been successfully applied to classification and prediction on other physiological time series. \cite{wulsin2011modeling} applied Deep Belief Networks (DBNs), a related technique to the task of anomaly detection in clinical EEG records. The group found that 
+DBNs produced comparable results to other state of art methods, but significantly faster. They found
+that using the raw EEG waveform showed improved performance in an
+anomaly detection task over engineered features.
+These results underscore the advantage of deep learning methods in 
+automatically uncovering useful features. \\
+
+To obtain adequate performance a body of techniques and tricks need to be considered. In \cite{hinton2012deep} speech recognition groups at Google, Microsoft, IBM and University of Toronto share various techniques for improving DNN performance. For instance, one should consider techniques for
+preventing overfitting by certain restrictions on weight updating and smart initialization of weights.
+
+\subsection{Approach and Learning Problem}
+
+Equation (6) describes
+the output of a neuron $j$ given the weighted commulative input $x_j$ (7). 
+\begin{align}
+y_{j} = \frac{1}{1+e^{-x_{j}}} \\
+x_{j} = b_{j} + \sum_{i}y_{i}w_{ij} \\
+p(sepsis \mid S) = \frac{1}{1 + exp(x_{sepsis})}
+\end{align}
+
+Equation 8 presents the most simplistic task, the probability
+of sepsis given some some sequence of physiological signals $S$. We can
+extend this to multi-class classification by a generalization
+of this output function, \textit{softmax}. Given the simple task, the 
+target function is simply (9) where $t_{j}$ is the correct class label (eg, sepsis or not sepsis).
+\begin{align}
+J = -\sum_{j} t_{j} log(y_{j})
+\end{align} \\
+
+Typically DNNs are pretrained layerwise by treating each layer as a 
+Restricted Boltzmann Machine (RBM), a technique which we will implement for this project. \\
+
+Acquiring good performance with DNNs relies upon proper weight initialization, pretraining, topology and other considerations described in \cite{vesely2013sequence, hinton2012deep}. We will also compare the performance of the DNN using the raw heart rate data versus a derived dataset with standard features. 
+
+\subsection{Data}
+
+The data for this task consists of heart rate sampled at 2 Hz derived from the MIMIC II Waveform Database. For DNN training, we use a 486 record subset which 
+serves as the training, dev, and test sets. 
+Each record contains heart rate for an ICU patient with SIRS, severe sepsis or septic shock, with at least
+12 hours preceding the event.
+
 \bibliographystyle{plain}
 
-\bibliography{PhysMod}
+\bibliography{PhysMod,dnn}
 
 \end{document}
