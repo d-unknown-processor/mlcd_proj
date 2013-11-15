@@ -316,12 +316,12 @@ Computing the expected loss with dynamic programming, where we maintain a vector
 \subsection{Problem Definition}
 The goal of this section is to train Deep Neural Networks (DNN) to estimate the probability of developing a disease state given a sequence of
 physiological data. Here, the task is early prediction of septic shock in ICU patients with a documented infection. Heart rate is used as input to
-the DNN. We will estimate the probability of an ICU patient developing a form of sepsis $P(sepsis \mid S)$ where $S$ is window into the 
+the DNN. We will estimate the probability of an ICU patient developing a form of sepsis $P(sepsis \mid S)$ where $S$ is a window of the 
 heart rate timeseries. DNNs have produced state of the art performance in a number of domains. The paradigm gains efficacy over traditional neural networks in part due to its ability to extract multiple layers of features during its unsupervised pretraining. Onset of sespsis is believed to be preceded by reduced complexity of the cardiac waveform, one such highlevel predictor of the disease we speculate that the neural network may learn. 
 
 \subsection{Related Work}
 
-At present, deep learning the task of sepsis prediction appears relatively unexplored. However, these techniques have been successfully applied to classification and prediction on other physiological time series. \cite{wulsin2011modeling} applied Deep Belief Networks (DBNs), a related technique to the task of anomaly detection in clinical EEG records. The group found that 
+At present, deep learning the task of sepsis prediction appears relatively unexplored. However, these techniques have been successfully applied to classification and prediction on other physiological time series. \cite{wulsin2011modeling} applied Deep Belief Networks (DBNs), a method related to DNNs, to the task of anomaly detection in clinical EEG records. The group found that 
 DBNs produced comparable results to other state of art methods, but significantly faster. They found
 that using the raw EEG waveform showed improved performance in an
 anomaly detection task over engineered features.
