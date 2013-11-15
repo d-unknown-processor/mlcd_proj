@@ -197,7 +197,41 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%Here is where the actual math begins%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\setcounter{section}{3}
+\setcounter{section}{2}
+\section{Feature Discovery}
+\subsection{Problem Definition}
+The goal of this section is to detect hidden states over the time-series data for each patient, that would augment features being used by subsequent prediction systems. A natural model for such a system is the HMM. Using these hidden state sequences as input tokens of a document, we intend to run Topic models over all the patient records to see if there is any groups of states or any patten in state sequences that either explain or help predict the onset of septic shock.
+\subsection{Related Works}
+As noted in our proposal, the prognosis of septic shock in critically ill patients has a lot of variability. There is no single monolithic notion of septic shock \cite{Shavdia2007} . There are several methods to approach feature discovery in time series data of this nature. \cite{Esbroeck2012hrt}  applied symbolic aggregate approximation SAX \cite{Lin2003sax} on physiological time series data. More recently, Time series topic models have also been developed, \cite{SariaThesis2011} these work directly on continuous time domain signals and extract latent motifs. In our approach, we would like to investigate an HMM based approach, to allow a hidden state to emit a vector observation for a single time instance, where each element in the observation vector represents the observation of each channel of data (ECG, blood pressure, oxygen saturation etc).
+\subsection{Contribution}
+The dataset contains patient heart rate data at a frequency of 2 Hz. Each sample has been obtained by computing statistics over a 2 minute window from a the original heart rate data. Thus, every 120th sample represents statistics from a non-overlapping region from the original data. The first task is to extract these samples per patient record. We intend to find hidden states that best explain this lower resolution data. Each state of our HMM model will cover a wider time window, our current estimate for length of observation window per state is 30 minutes.\\
+We also intend to extend the HMM to a coupled HMM where the second set of observations would represent blood pressure, temperature or oxygen saturation. Ideally the second set of observations would be in close time sync with the Heart rate data. This would be a factor in deciding which data stream (temperature, blood pressure or oxygen saturation) we would use for the second observation layer in the coupled HMM. Another factor would be the availability of these streams for all patient records. \\
+\subsection{Learning Problem}
+We propose to learn a HMM and then extend it to a coupled HMM. The 2 layers of observation are heart rate and blood pressure, temperature or oxygen saturation.  We intent to learn the states sequence that would best explain the patient records. Below is a representation of this coupled HMM, with each variable defined.\\
+\begin{figure}[ht]
+  \begin{center}
+    \begin{tabular}{cc}
+      \input{coupled_hmm}
+    \end{tabular}
+  \end{center}
+  \caption{Coupled HMM model}
+\label{fig:coupled_hmm_fig}
+\end{figure}
+\begin{align*}
+O^1 &= o^1_{0}, \ldots,o^1_{T},   \text{sequence of heart rate observations (statistics from a 30 min time window)}\\
+O^2 &=o^2_{0}, \ldots,o^2_{T},  \text{sequence of blood pressure or oxygen saturation}\\
+Z &=  z_{0}, \ldots,z_{T}, \text{sequence of ${O^2}$ related states}\\
+Y &=  y_{0}, \ldots,y_{T},  \text{sequence of ${O^1}$ related states}\\
+\end{align*}
+\subsubsection{State Priors}
+Using appropriate priors and initial values for states is crucial to restrain the system from straying away from what might be explanatory data. We intend to encode some of our prior intuitions in this model in the following manner. Let ${Y}$ represent the states for heart rate observations over the patient record. We have the following insights from the data that we would like to encode.\\
+1. Bootstrap from Patient Records: Each patient record has a time stamp representing the presence of SIRS, Sepsis, Severe Sepsis or Septic Shock. While this time stamps are not exact (that is, they are marked when the clinician happens to observe the symptoms and there is no guarantee that it was the precise moment of onset) we can still get statistics from the time region surrounding the clinicians observation of the symptoms. Using this technique we can get good initial guesses for statistics (such as means, and variances i.e. modeling the observation as a Guassian) for 4 states. It might also be preferable to model the observation given the state as a Beta distribution as we know that Heart rate can never be negative (which a gaussian in theory will allow).\\
+2. Low Heart Rate Variability: Apart from the 4 states with we intend to bootstrap our model with states that have priors to restrict their parameters. One of the key insights regarding the onset of septic shock is reduction in heart rate variability. This informs us that one of the statistics that we need to compute from each 30 min time window should be a good indication of variability. Thus, simply getting mean heart rate for a 30 min duration would not be a good statistic. We intend to initialize a "Low Variability" state to capture this trend.
+3. High Heart Rate Variability: The opposite state from the pervious would be the "High Variability" state where the 30 min window shows significant variation.\\
+4. Reduction in Variability State: This state would be initialized such that there is variability across the earlier samples which slowly decline as we reach the end of the time window. One way to achive this is to place a prior over the slope of a statistic such as change in variable from beginning of window to the end. A negative slope indicates reduction of variability.\\
+Similar set of priors and initialization methods can be applied to the states corresponding to the ${Z}$ chain as well. It's important to note that some experimentation would be required to get a sense of these priors, they should be restrictive enough to coerce the model in the general direction we want, but also allow for discovery of states, and states sequences. We do not have plans for priors over state transitions.
+
+
 
 \section{Reliable Classification}
 
