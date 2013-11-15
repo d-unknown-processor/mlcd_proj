@@ -197,7 +197,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%Here is where the actual math begins%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\setcounter{section}{2}
+\setcounter{section}{0}
 \section{Feature Discovery}
 \subsection{Problem Definition}
 The goal of this section is to detect hidden states over the time-series data for each patient, that would augment features being used by subsequent prediction systems. A natural model for such a system is the HMM. Using these hidden state sequences as input tokens of a document, we intend to run Topic models over all the patient records to see if there is any groups of states or any patten in state sequences that either explain or help predict the onset of septic shock.
@@ -307,7 +307,7 @@ From this we see that the system will either make the decision $u_T = c \in \bar
 
 Computing the expected loss with dynamic programming, where we maintain a vector of the class costs from the previous time step, requires $C(C+1)+4$ operations at each time point, so the overall complexity is $O(TC^2)$. For space efficiency, it is only necessary to maintain the cost vector from the previous time step.
 
-\setcounter{section}{3}
+
 \section{Neural Networks for Posterior Estimation}
 
 \subsection{Problem Definition}
@@ -361,6 +361,6 @@ Each record contains heart rate for an ICU patient with SIRS, severe sepsis or s
 
 \bibliographystyle{plain}
 
-\bibliography{PhysMod,dnn}
+\bibliography{PhysMod,dnn,ref}
 
 \end{document}
