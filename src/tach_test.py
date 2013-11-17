@@ -90,8 +90,12 @@ def train(mlp, xs, y, window_size, window_step_size):
       for l in range(0, len(partial_grad)):
         for k in range(0, len(partial_grad[l])):
           grad[l][k] += partial_grad[l][k]
-      
     i += window_step_size
+  # If grad is None, then we haven't gotten into the while loop,
+  # and the length of the input is shorter than the width of the
+  # window.
+  if grad == None:
+    return  
   mlp.update_weights(grad)
 
 def train_online(mlp, xs, y, window_size, window_step_size):
@@ -156,20 +160,20 @@ def main():
     if y == 0 and c0 < 2:
       new_training.append((xs, y))
       c0 +=1
-  training = new_training
+  #training = new_training
   #
   print "len training = " + str(len(training))
   count0 = 0
   count1 = 0
   random.shuffle(training)
-  window_size = 7000
+  window_size = 7200
   n_input = window_size
-  n_hidden = 100
+  n_hidden = 1000
   n_output = 1
   num_hidden_layers = 1
-  eta = .0001
+  eta = .000005
   mlp = MLP(n_input, num_hidden_layers, n_hidden, n_output, eta)
-  n_epochs = 10
+  n_epochs = 30
 
   l = loss(mlp, training, window_size, window_size/2)
   print "initial loss: " + str(l)
