@@ -12,16 +12,24 @@ class Layer:
     self.X = None # Input
     self.id = id 
 
+  # Initialize weights to small values.
+  # I'm samplying from uniform(0, 1).
+  # There is probably a smarter way to do this.
   def init_weights(self):
     weights = []
     for i in range(self.n_input + 1):
-      weights.append(np.random.uniform(-1, 1, size=(self.n_output)))
+      weights.append(np.random.normal(0, .10, size=(self.n_output)))
     return np.array(weights)
 
   # Here g is a logistic function
   def g(self, x):
-   return 1.0/(1.0 + math.exp(-x))
+   try:
+     return 1.0/(1.0 + math.exp(-x))
+   except Exception:
+     print "In overflow x = " + str(x)
+     return 1.0
    
+  # Get output from any layer
   def get_output(self, X):
     X = np.append(np.array(X, copy=True), 1)
     self.X = X
@@ -30,12 +38,22 @@ class Layer:
     self.output = activation(A)
     return self.output
 
+  # For updating weights after each training example.
   def update_weights(self, gradient):
     W = []
     for i in range(0, len(self.W)):
       w = []
       for j in range(0, len(self.W[i])):
-       # w.append(self.W[i][j] + eta * d_o[j] * self.X[i])
+        w.append(self.W[i][j] + gradient[i][j])
+      W.append(w)
+    self.W = np.array(W)
+
+  # For updating weights after each window in the training example.
+  def update_weights_online(self, gradient):
+    W = []
+    for i in range(0, len(self.W)):
+      w = []
+      for j in range(0, len(self.W[i])):
         w.append(self.W[i][j] + gradient[j] * self.X[i])
       W.append(w)
     self.W = np.array(W)
@@ -64,6 +82,15 @@ class Layer:
       d_h[i] *= eta * (1 - self.output[i]) * v
     return d_h
    
+  # To be added to the weight
+  def get_weight_update(self, gradient):
+    W = []
+    for i in range(0, len(self.W)):
+      w = []
+      for j in range(0, len(self.W[i])):
+        w.append(gradient[j] * self.X[i])
+      W.append(w)
+    return np.array(W)
 
 class MLP:
   def __init__(self, n_input, num_hidden_layers, n_hidden, n_output, eta=1):
@@ -78,21 +105,39 @@ class MLP:
       self.layers.append(Layer(n_hidden, n_hidden, i))
     self.output_layer = Layer(n_hidden, n_output, num_hidden_layers)
 
+  # Propogate input through each layer
   def forwards(self, X):
-    # Propogate input through each layer
     for layer in self.layers:
       X = layer.get_output(X)
-      #print "X in forwards loop = " + str(X)
     return self.output_layer.get_output(X)
-    #print "O = " + str(O)
 
+  # Update the weights given a gradient
+  def update_weights(self, grad):
+    self.output_layer.update_weights(grad[0])
+    for i in range(1, len(self.layers)+1):
+      idx = len(self.layers) - i
+      self.layers[idx].update_weights(grad[i])
+
+  # Get the gradient for each layer
   def backwards(self, T, X):
     d_o = self.output_layer.get_output_layer_gradient_cross_ent(T, self.eta)
-    self.output_layer.update_weights(d_o)
+    grad = [self.output_layer.get_weight_update(d_o)]
     prev_layer = self.output_layer
     X = np.append(X, 1)
     for i in range(1, len(self.layers)+1):
       idx = len(self.layers) - i
       d_o = self.layers[idx].get_gradient(d_o, prev_layer.W, self.eta)
       prev_layer = self.layers[idx-1]
-      self.layers[idx].update_weights(d_o)
+      grad.append(self.layers[idx].get_weight_update(d_o))
+    return grad
+
+  def backwards_online(self, T, X):
+    d_o = self.output_layer.get_output_layer_gradient_cross_ent(T, self.eta)
+    self.output_layer.update_weights_online(d_o)
+    prev_layer = self.output_layer
+    X = np.append(X, 1)
+    for i in range(1, len(self.layers)+1):
+      idx = len(self.layers) - i
+      d_o = self.layers[idx].get_gradient(d_o, prev_layer.W, self.eta)
+      prev_layer = self.layers[idx-1]
+      self.layers[idx].update_weights_online(d_o)
