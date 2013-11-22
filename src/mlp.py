@@ -18,7 +18,7 @@ class Layer:
   def init_weights(self):
     weights = []
     for i in range(self.n_input + 1):
-      weights.append(np.random.normal(0, .10, size=(self.n_output)))
+      weights.append(np.random.normal(0, 1.0/math.sqrt(self.n_input + 1), size=(self.n_output)))
     return np.array(weights)
 
   # Here g is a logistic function
