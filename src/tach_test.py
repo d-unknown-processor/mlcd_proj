@@ -23,6 +23,8 @@ def get_data():
   training_file = ""
   training = []
   dev = []
+  count_c0 = 0
+  count_c1 = 0
   f = open(train_map, 'r').readlines()
   for line in f:
     sys.stderr.write(".")
@@ -61,6 +63,10 @@ def get_data():
         print "Has Infs or NaNs"
       if len(l) < 1:
         continue
+      if cl == 1:
+        count_c1 += 1
+      elif cl == 0:
+        count_c0 += 1
       raw_x = float(l)
       if raw_x == "-Inf":
         xs.append(mn)
@@ -72,7 +78,7 @@ def get_data():
         training_x.append((raw_x - mean)/stdev)
     training.append((training_x, cl))
   f.close()
-  return training
+  return training, count_c0, count_c1
 
 
 def train(mlp, xs, y, window_size, window_step_size):
@@ -111,6 +117,7 @@ def train_online(mlp, xs, y, window_size, window_step_size):
 
 def loss(mlp, data_set, window_size, window_step_size):
   total_loss = 0
+  count = 0
   for xs, y in data_set:
     i = window_size
     while i < len(xs):
@@ -123,7 +130,9 @@ def loss(mlp, data_set, window_size, window_step_size):
       if y == 0:
         total_loss -= np.log(1-output)
       i += window_step_size
-  return total_loss
+      count += 1
+  # Per frame loss
+  return total_loss/float(count)
  
 def error(mlp, data_set, window_size, window_step_size):
   class1_error = 0
@@ -148,7 +157,10 @@ def error(mlp, data_set, window_size, window_step_size):
   print "class1 error " + str(class1_error/float(count1))
 
 def main():
-  training = get_data()
+  training, count_c0, count_c1 = get_data()
+  window_size = 7200
+  print "#class0: ", count_c0/float(window_size), "#class1:", count_c1/float(window_size)
+  return
   # RM this:
   new_training = []
   c1 = 0
@@ -166,14 +178,13 @@ def main():
   count0 = 0
   count1 = 0
   random.shuffle(training)
-  window_size = 7200
   n_input = window_size
   n_hidden = 1000
   n_output = 1
   num_hidden_layers = 1
-  eta = .000005
+  eta = .00005
   mlp = MLP(n_input, num_hidden_layers, n_hidden, n_output, eta)
-  n_epochs = 30
+  n_epochs = 50
 
   l = loss(mlp, training, window_size, window_size/2)
   print "initial loss: " + str(l)
@@ -182,7 +193,7 @@ def main():
     random.shuffle(training)
     c = 0
     for xs, y in training:
-      if c == 5:
+      if c == 10:
         break
       print "training data " + str(c)
       c += 1
