@@ -12,13 +12,28 @@ class Layer:
     self.X = None # Input
     self.id = id 
 
+  def to_str(self):
+    return str(self.W)
+
+  def adjust_w(self):
+    if self.id < 2:
+      return
+    variances = []
+    for i in range(0, self.n_output):
+      std = np.std(self.W[i])
+      #mean = np.mean(self.W[i])
+      #self.W[i] = np.add(self.W[i],-mean)
+      self.W[i] = self.W[i]/(std)
+    
+
   # Initialize weights to small values.
   # I'm samplying from uniform(0, 1).
   # There is probably a smarter way to do this.
   def init_weights(self):
     weights = []
-    for i in range(self.n_input + 1):
-      weights.append(np.random.normal(0, 1.0/math.sqrt(self.n_input + 1), size=(self.n_output)))
+    for i in range(self.n_output):
+      weights.append(np.random.normal(0, 1.0/math.sqrt(self.n_input), size=(self.n_input)))
+      #weights.append(np.random.uniform(-1.0/math.sqrt(self.n_input), 1.0/math.sqrt(self.n_input), size=(self.n_output)))
     return np.array(weights)
 
   # Here g is a logistic function
@@ -31,10 +46,9 @@ class Layer:
    
   # Get output from any layer
   def get_output(self, X):
-    X = np.append(np.array(X, copy=True), 1)
     self.X = X
     activation = np.vectorize(self.g)
-    A = X.dot(self.W)
+    A = self.X.dot(self.W.T)
     self.output = activation(A)
     return self.output
 
@@ -47,6 +61,7 @@ class Layer:
         w.append(self.W[i][j] + gradient[i][j])
       W.append(w)
     self.W = np.array(W)
+    self.adjust_w()
 
   # For updating weights after each window in the training example.
   def update_weights_online(self, gradient):
@@ -74,21 +89,25 @@ class Layer:
   # V is the weight matrix for the layer which succeeds this one
   def get_gradient(self, d_o, V, eta):
     # Compute error and derivative d_h at hidden
+    #print "len d_o = ", len(d_o)
+    #print "len V = ", len(V)
+    #print "len V[i] = ", len(V[0])
     d_h = np.array(self.output, copy=True)
-    for i in range(0, len(d_h)):
+    #print "len d_h = ", len(d_h)
+    for j in range(0, len(d_h)):
       v = 0
-      for j in range(0, len(d_o)):
-        v += V[i][j] * d_o[j]
-      d_h[i] *= eta * (1 - self.output[i]) * v
+      for k in range(0, len(d_o)):
+        v += V[k][j] * d_o[k]
+      d_h[j] *= eta * (1 - self.output[j]) * v
     return d_h
    
   # To be added to the weight
   def get_weight_update(self, gradient):
     W = []
-    for i in range(0, len(self.W)):
+    for i in range(0, self.n_output):
       w = []
-      for j in range(0, len(self.W[i])):
-        w.append(gradient[j] * self.X[i])
+      for j in range(0, self.n_input):
+        w.append(gradient[i] * self.X[j])
       W.append(w)
     return np.array(W)
 
@@ -104,6 +123,13 @@ class MLP:
     for i in range(1, num_hidden_layers):
       self.layers.append(Layer(n_hidden, n_hidden, i))
     self.output_layer = Layer(n_hidden, n_output, num_hidden_layers)
+
+  def to_str(self):
+    s = ""
+    for i in range(0, self.n_num_hidden_layers):
+      s += str(i) + " "  + self.layers[i].to_str() + "\n"
+    s += "o " + self.output_layer.to_str() + "\n"
+    return s
 
   # Propogate input through each layer
   def forwards(self, X):
@@ -123,19 +149,20 @@ class MLP:
     d_o = self.output_layer.get_output_layer_gradient_cross_ent(T, self.eta)
     grad = [self.output_layer.get_weight_update(d_o)]
     prev_layer = self.output_layer
-    X = np.append(X, 1)
+    #X = np.append(X, 1)
     for i in range(1, len(self.layers)+1):
       idx = len(self.layers) - i
       d_o = self.layers[idx].get_gradient(d_o, prev_layer.W, self.eta)
-      prev_layer = self.layers[idx-1]
+      prev_layer = self.layers[idx]
       grad.append(self.layers[idx].get_weight_update(d_o))
+    #print "output grad = ", grad
     return grad
 
   def backwards_online(self, T, X):
     d_o = self.output_layer.get_output_layer_gradient_cross_ent(T, self.eta)
     self.output_layer.update_weights_online(d_o)
     prev_layer = self.output_layer
-    X = np.append(X, 1)
+    #X = np.append(X, 1)
     for i in range(1, len(self.layers)+1):
       idx = len(self.layers) - i
       d_o = self.layers[idx].get_gradient(d_o, prev_layer.W, self.eta)
