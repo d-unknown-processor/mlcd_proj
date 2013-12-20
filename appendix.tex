@@ -269,42 +269,61 @@ preventing overfitting by certain restrictions on weight updating and smart init
 
 \subsection{Approach}
 
-Equation (6) describes
-the output of a neuron $j$ given the weighted commulative input $x_j$ (7). 
+Equation (\ref{eqn:sigmoid}) describes
+the output of a neuron $j$ given the weighted commulative input $x_j$ (\ref{eqn:nn_x}). 
 \begin{align}
-y_{j} = \frac{1}{1+e^{-x_{j}}} \\
-x_{j} = b_{j} + \sum_{i}y_{i}w_{ij} \\
-p(sepsis \mid S) = \frac{1}{1 + exp(x_{sepsis})}
+y_{j} = \frac{1}{1+e^{-x_{j}}}
+\label{eqn:sigmoid}
 \end{align}
-
+\begin{align}
+x_{j} = b_{j} + \sum_{i}y_{i}w_{ij}
+\label{eqn:nn_x}
+\end{align}
+\begin{align}
+p(sepsis \mid S) = \frac{1}{1 + exp(x_{sepsis})}
+\label{eqn:nn_prob}
+\end{align}
 \begin{align}
 J = -\sum_{j} t_{j} log(y_{j})
-\end{align} \\
-\\
+\label{eqn:nn_J}
+\end{align}
 \begin{align}
-\nabla J(w) = -\sum_{j} (y_{j} - t_{j}) x_{j} \\
+\nabla J(w) = -\sum_{j} (y_{j} - t_{j}) x_{j}
+\label{eqn:nn_dJ}
+\end{align}
+\begin{align}
 input = \bar{x}_{1}, \sigma_{1}, \bar{x}_{2}, \sigma_{2}, ... ,\bar{x}_{60}, \sigma_{60}
-\end{align} \\
+\label{eqn:nn_input}
+\end{align}
 
-Equation (8) represents the probability
+Equation (\ref{eqn:nn_prob}) represents the probability
 of sepsis given some some sequence of physiological signals $S$. With only two classes, this is equivalent to the
 \textit{softmax} function. The 
-target function is (9) where $t_{j}$ is the correct class label (eg, sepsis or not sepsis). Equation (10)
+target function is (\ref{eqn:nn_J}) where $t_{j}$ is the correct class label (eg, sepsis or not sepsis). Equation (\ref{eqn:nn_dJ})
 is the derivative at the output layer. Input to the network is a one hour frame in the form of a 2x60 vector of mean heart rate $\bar{x}$
 and heart rate standard deviation $\sigma$. Each statistic is measured from a one minute interval in the original 2 Hz data.
 \begin{align}
-\eta = \frac{A}{\frac{epoch_{j}}{epoch_{max}} + 1} \\
-w_{i,j} \sim N(0, \frac{1}{\sqrt{inputs_{j}}}) \\
+\eta = \frac{A}{\frac{epoch_{j}}{epoch_{max}} + 1}
+\label{eqn:nn_eta}
+\end{align}
+\begin{align}
+w_{i,j} \sim N(0, \frac{1}{\sqrt{inputs_{j}}})
+\label{eqn:nn_w1}
+\end{align}
+\begin{align}
 w_{i,j} \leftarrow \frac{w_{i,j}}{\sigma_{j}}
+\label{eqn:nn_w2}
 \end{align}
 \\
-Neural networks require careful weight initialization, pretraining (for deep networks), topology and other considerations described in \cite{vesely2013sequence, hinton2012deep}. To help guarantee convergence, we have a learning rate which decreases as the number of epochs increase (12). Weights are drawn from a normal distribution (13), which we found offered greater stability over alternative distributions, such as uniform. After two or three hidden layers, the network suffers from oversaturation, which is characterized by a very large range of values from the
-transfer functions in (8), resulting in numerical overflow and underflow. To combat this issue, we simply divide by the standard deviation
-of the weights in the oversaturated layer during training (14).
+Neural networks require careful weight initialization, pretraining (for deep networks), topology and other considerations 
+described in \cite{vesely2013sequence, hinton2012deep}. To help guarantee convergence, we have a learning rate which decreases as the 
+number of epochs increase (\ref{eqn:nn_eta}). Weights are drawn from a normal distribution (\ref{eqn:nn_w1}), which we found offered greater stability over alternative distributions, such as uniform. After two or three hidden layers, the network suffers from oversaturation, which is characterized by a very large range of values from the
+transfer functions in (\ref{eqn:sigmoid}), resulting in numerical overflow and underflow. To combat this issue, we simply divide by the standard deviation
+of the weights in the oversaturated layer during training (\ref{eqn:nn_w2}).
 \\
 We use a standard batch gradient descent backpropagation algorithm to train the network. We experimented with stochastic gradient descent and didn't
 notice much of an advantage. Moreover, it's easier to track the training process in batch gradient descent: at each epoch, we calculate
-the loss function (9) and in the batch variation, we can be sure that the network's parameters have been altered by every training example.
+the loss function (\ref{eqn:nn_J}) and in the batch variation, we can be sure that the network's parameters have been altered by every training example.
 
 \subsection{Preliminary Results and Evaluation}
 
