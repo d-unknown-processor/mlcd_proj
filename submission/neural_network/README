@@ -1,0 +1,44 @@
+Neural Networks for Early Prediction of Sepsis
+Author: David Snyder
+MLCD Dec 20th 2013
+
+Note: you will not be able to run any of the sepsis related scripts.
+It is impractical to include all 12 gigs of heart rate data in this
+submission which the scripts rely on. 
+Also, I do not feel at liberty to submit medical data in a 
+homework assignment or submit it to github. Please note that I am 
+happy to provide an in person demo on my filesystem, if there is any 
+doubt that this works as reported. 
+
+However, I have included a WORKING DEMO, which you can run by
+typing
+    python density_demo.py
+in this directory. This demonstrates a neural network learning
+a mapping called the Density Classification and then subsequently
+being tested on a dev/validation set. This is a 5-bit density
+classification task, and so the network has 5 inputs. There are 
+100 nodes in the hidden layer. This network should achieve an 
+accuracy of about 15% on the dev/validation set.
+
+Files included in this submission:
+
+  README ..................... This file
+
+  mlp.py ..................... The Multilayer Perceptron class
+
+  density_demo.py ............ The density demo
+
+  density_dev.txt ............ Dev/validation set for the demo
+
+  density_train.txt .......... Training set for the demo
+
+  make_averaged_data.py ...... A script for generating 1 minute features 
+                               from the original 2 Hz heartrate
+
+  make_training_stats.py ..... A script for calculating statistics on the
+                               features above. This is needed to normalize
+                               the input to the network.
+
+  sepsis_heartrate_test.py ... The main script for experimenting with 
+                               neural network sepsis prediction using 
+                               heart rate.
