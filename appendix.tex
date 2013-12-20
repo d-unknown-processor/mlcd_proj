@@ -31,6 +31,8 @@
 \usepackage{multicol,parskip}
 \usepackage{graphicx,booktabs}
 \usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
 \usetikzlibrary{bayesnet}
 \setlength{\oddsidemargin}{0pt} \setlength{\evensidemargin}{0pt}
 \setlength{\textwidth}{6.5in} \setlength{\topmargin}{-.5in}
@@ -311,27 +313,34 @@ From this we see that the system will either make the decision $u_T = c \in \bar
 Computing the expected loss with dynamic programming, where we maintain a vector of the class costs from the previous time step, requires $C(C+1)+4$ operations at each time point, so the overall complexity is $O(TC^2)$. For space efficiency, it is only necessary to maintain the cost vector from the previous time step.
 
 
-\section{Neural Networks for Posterior Estimation}
+\section{Neural Networks for Sepsis Prediction}
 
-\subsection{Problem Definition}
-The goal of this section is to train Deep Neural Networks (DNN) to estimate the probability of developing a disease state given a sequence of
-physiological data. Here, the task is early prediction of septic shock in ICU patients with a documented infection. Heart rate is used as input to
-the DNN. We will estimate the probability of an ICU patient developing a form of sepsis $P(sepsis \mid S)$ where $S$ is a window of the 
-heart rate timeseries. DNNs have produced state of the art performance in a number of domains. The paradigm gains efficacy over traditional neural networks in part due to its ability to extract multiple layers of features during its unsupervised pretraining. Onset of sespsis is believed to be preceded by reduced complexity of the cardiac waveform, one such highlevel predictor of the disease we speculate that the neural network may learn. 
+\subsection{Introduction}
+
+\begin{figure}[h!]
+  \caption{Schematic of a simple neural network}
+  \centering
+    \includegraphics[width=1.0\textwidth]{nn_plots/nn}
+\end{figure}
+
+The goal of this section is to train neural networks to estimate the probability of developing a disease state given a sequence of
+physiological data. Here, the task is early prediction of septic shock in ICU patients with a documented infection. Heart rate is used as input to the neural network. We estimate the probability of an ICU patient developing a form of sepsis $P(sepsis \mid S)$ where $S$ is a window of the 
+heart rate timeseries. This model is motivated by the state of the art performance produced by Deep Neural Networks in a number of domains.
+
 
 \subsection{Related Work}
 
-At present, deep learning the task of sepsis prediction appears relatively unexplored. However, these techniques have been successfully applied to classification and prediction on other physiological time series. \cite{wulsin2011modeling} applied Deep Belief Networks (DBNs), a method related to DNNs, to the task of anomaly detection in clinical EEG records. The group found that 
+The application of neural networks to the the task of sepsis prediction appears relatively unexplored. However, neural network techniques have been successfully applied to classification and prediction on other physiological time series. \cite{wulsin2011modeling} applied Deep Belief Networks (DBNs), a method related to Deep Neural Networks (DNN), to the task of anomaly detection in clinical EEG records. The group found that 
 DBNs produced comparable results to other state of art methods, but significantly faster. They found
 that using the raw EEG waveform showed improved performance in an
 anomaly detection task over engineered features.
 These results underscore the advantage of deep learning methods in 
 automatically uncovering useful features. \\
 
-To obtain adequate performance a body of techniques and tricks need to be considered. In \cite{hinton2012deep} speech recognition groups at Google, Microsoft, IBM and University of Toronto share various techniques for improving DNN performance. For instance, one should consider techniques for
+To obtain adequate performance a body of techniques and tricks need to be considered. In \cite{hinton2012deep} speech recognition groups at Google, Microsoft, IBM and University of Toronto share various techniques for improving neural network performance. For instance, one should consider techniques for
 preventing overfitting by certain restrictions on weight updating and smart initialization of weights.
 
-\subsection{Approach and Learning Problem}
+\subsection{Approach}
 
 Equation (6) describes
 the output of a neuron $j$ given the weighted commulative input $x_j$ (7). 
@@ -341,39 +350,131 @@ x_{j} = b_{j} + \sum_{i}y_{i}w_{ij} \\
 p(sepsis \mid S) = \frac{1}{1 + exp(x_{sepsis})}
 \end{align}
 
-Equation 8 presents the most simplistic task, the probability
-of sepsis given some some sequence of physiological signals $S$. We can
-extend this to multi-class classification by a generalization
-of this output function, \textit{softmax}. Given the simple task, the 
-target function is simply (9) where $t_{j}$ is the correct class label (eg, sepsis or not sepsis).
 \begin{align}
 J = -\sum_{j} t_{j} log(y_{j})
 \end{align} \\
 \\
-\[
-x = \bar{x}_{1}, \sigma_{1}, \bar{x}_{2}, \sigma_{2}, ... ,\bar{x}_{60}, \sigma_{60}
-\]
-\\
-\[
-\eta = \frac{A}{\frac{epoch_{j}}{epoch_{max}} + 1}
-\]
-\\
-\[
-w_{i,j} \sim N(0, \frac{1}{\sqrt{inputs_{j}}})
-\]
-\\
-\[
-w_{i,j} \leftarrow \frac{w_{i,j}}{\sigma_{j}}
-\]
-\\
-Typically DNNs are pretrained layerwise by treating each layer as a 
-Restricted Boltzmann Machine (RBM), a technique which we will implement for this project. \\
+\begin{align}
+\nabla J(w) = -\sum_{j} (y_{j} - t_{j}) x_{j} \\
+input = \bar{x}_{1}, \sigma_{1}, \bar{x}_{2}, \sigma_{2}, ... ,\bar{x}_{60}, \sigma_{60}
+\end{align} \\
 
-Acquiring good performance with DNNs relies upon proper weight initialization, pretraining, topology and other considerations described in \cite{vesely2013sequence, hinton2012deep}. We will also compare the performance of the DNN using the raw heart rate data versus a derived dataset with standard features. 
+Equation (8) represents the probability
+of sepsis given some some sequence of physiological signals $S$. With only two classes, this is equivalent to the
+\textit{softmax} function. The 
+target function is (9) where $t_{j}$ is the correct class label (eg, sepsis or not sepsis). Equation (10)
+is the derivative at the output layer. Input to the network is a one hour frame in the form of a 2x60 vector of mean heart rate $\bar{x}$
+and heart rate standard deviation $\sigma$. Each statistic is measured from a one minute interval in the original 2 Hz data.
+\begin{align}
+\eta = \frac{A}{\frac{epoch_{j}}{epoch_{max}} + 1} \\
+w_{i,j} \sim N(0, \frac{1}{\sqrt{inputs_{j}}}) \\
+w_{i,j} \leftarrow \frac{w_{i,j}}{\sigma_{j}}
+\end{align}
+\\
+Neural networks require careful weight initialization, pretraining (for deep networks), topology and other considerations described in \cite{vesely2013sequence, hinton2012deep}. To help guarantee convergence, we have a learning rate which decreases as the number of epochs increase (12). Weights are drawn from a normal distribution (13), which we found offered greater stability over alternative distributions, such as uniform. After two or three hidden layers, the network suffers from oversaturation, which is characterized by a very large range of values from the
+transfer functions in (8), resulting in numerical overflow and underflow. To combat this issue, we simply divide by the standard deviation
+of the weights in the oversaturated layer during training (14).
+\\
+We use a standard batch gradient descent backpropagation algorithm to train the network. We experimented with stochastic gradient descent and didn't
+notice much of an advantage. Moreover, it's easier to track the training process in batch gradient descent: at each epoch, we calculate
+the loss function (9) and in the batch variation, we can be sure that the network's parameters have been altered by every training example.
+
+\subsection{Preliminary Results and Evaluation}
+
+\begin{figure}
+        \centering
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/loss2}
+                \caption{Cross entropy loss vs. number of epochs.}
+                \label{fig:entropy}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/dev2}
+                \caption{Development (validation) set error rate vs. number of epochs.}
+                \label{fig:dev}
+        \end{subfigure}
+\caption{Typical results for a network with 120 input nodes, 1 hidden layer with 100 nodes, and one output layer with 1 node.}\label{fig:loss_dev}
+\end{figure}
+
+In figure \ref{fig:loss_dev} we present typical results for a network with 120 input nodes, 1 hidden layer with 100 nodes, and a single output layer with 1 node. Given the current framework, we didn't see an advantage in using more than 1 hidden layer. The development (validation) error rate
+in ~\ref{fig:dev} is the classification error rate. To obtain classification from the conditional probabilities generated by the network, we
+map probabilities at or above 0.5 to class 1, and probabilities below 0.5 to class 0.
+\\
+\\
+To train the network in figure ~\ref{fig:loss_dev} we do not use a sliding window over the entire time series for each patient. Instead, we 
+first separate the data into two categories: SIRS, and severe sepsis and septic shock. From the SIRS category we randomly select some
+number of 1 hour frames. From the severe sepsis and septic shock category, we only select the one hour frames which immediately precede 
+the onset of the disease. While this setup isn't ideal, it plays an important step in the goal of more sophisticated prediction, by
+demonstrating that we can distinguish between certain disease states by using just heart rate.
+
+\begin{figure}
+        \centering
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/probs_c0_1}
+                \caption{}
+                \label{fig:c0_0}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/probs_c1_2}
+                \caption{}
+                \label{fig:c0_0}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/probs_c0_3}
+                \caption{}
+                \label{fig:c0_0}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/probs_c1_3}
+                \caption{}
+                \label{fig:c0_0}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/probs_c0_4}
+                \caption{}
+                \label{fig:c0_0}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{nn_plots/probs_c1_4}
+                \caption{}
+                \label{fig:c0_0}
+        \end{subfigure}
+\caption{Probability of sepsis from beginning to end of individual dev (validation) records. The left column (blue) corresponds to patients who only have SIRS, while the right column (red) corresponds to those who develop either severe sepsis or septic shock by the end of the time series. These results are due to a network with 120 input nodes and 100 hidden layer nodes.}\label{fig:probs}
+\end{figure}
+The goal of this section is the early prediction of septic shock, rather than just the classification of it in static window. Figure ~\ref{fig:probs}
+illustrates preliminary results for this task. In each patient, we slide a window over the time series, and generate $p(sepsis \mid frame)$. Before calculating these probabilities, the network was trained using the techniques discussed in the previous session. Further, results were
+only reported for networks which achieved an error rate of .30 or less on the dev set (see ~\ref{fig:dev}). 
+\\
+\\
+Ideally, we would like to see that the $p(sepsis \mid frame_{t})$ increases over time for the patients with severe sepsis and septic shock
+and remains relatively constant for patients with SIRS. Additionally, it would be desirable for the $p(sepsis \mid frame_{t})$ to be 
+higher in general for those who go on to develop septic shock or severe sepsis than those who develop SIRs. Given our preliminary
+data, it is unclear if we can affirm either of these statements.   
+
+\subsection{Discussion}
+
+In \textit{Approach} we describe that the input to the network is a one hour frame of mean heart rate and heart rate standard deviation.
+The two features are extracted from 1 minute intervals in the original heart rate. Initially, we attempted to use the raw 2 Hz heart rate directly,
+but this suffered from slow training and near chance dev set accuracy. We also extracted these features at intervals of 
+15 and 7.5 minutes. Due to such extreme downsampling, the data was much faster to process, but accuracy was no better than chance. Experimentally, we found that features extracted at one minute intervals retained enough structure in the data for learning to occur (see \textit{Preliminary Results}) while being computationally tractable.
+ 
+\subsection{Future Work}
+
+We observed numerical instability and overfitting in networks with several layers. However, we never implemented the sophisticated pretraining
+methods characteristic of DNNs. After incorporating these techniques, we will explore what, if any, advantage deep neural networks provide
+us in this domain.
+\\
+\\
+Our current framework can accurately classify a one hour frame of heart rate as septic or not septic when the input is unambiguous. However,
+when used to predict the future onset of sepsis, results under this system are inconclusive (see \textit{Preliminary Results}).
+\\
+\\
+It is possible that heart rate alone doesn't have enough structure to adequately predict septic shock hours in advance. We will incorporate
+additional physiological signals, such as blood pressure and respiratory rate as features to the neural network.
 
 \subsection{Data}
 
-The data for this task consists of heart rate sampled at 2 Hz derived from the MIMIC II Waveform Database. For DNN training, we use a 486 record subset which 
+The data for this task consists of heart rate sampled at 2 Hz derived from the MIMIC II Waveform Database. For neural network training, we use a 486 record subset which 
 serves as the training, dev, and test sets. 
 Each record contains heart rate for an ICU patient with SIRS, severe sepsis or septic shock, with at least
 12 hours preceding the event.
