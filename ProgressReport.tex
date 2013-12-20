@@ -338,7 +338,7 @@ the output of a neuron $j$ given the weighted commulative input $x_j$ (7).
 \begin{align}
 y_{j} = \frac{1}{1+e^{-x_{j}}} \\
 x_{j} = b_{j} + \sum_{i}y_{i}w_{ij} \\
-p(sepsis \mid S) = \frac{1}{1 + exp(x_{sepsis})}
+p(sepsis \mid S) = \frac{1}{1 + exp(-x_{heartrate})}
 \end{align}
 
 Equation 8 presents the most simplistic task, the probability
@@ -349,7 +349,27 @@ target function is simply (9) where $t_{j}$ is the correct class label (eg, seps
 \begin{align}
 J = -\sum_{j} t_{j} log(y_{j})
 \end{align} \\
-
+\\
+\begin{align}
+\nabla J(w) = -\sum_{j} (y_{j} - t_{j}) x_{j}
+\end{align} \\
+\\
+\[
+x = \bar{x}_{1}, \sigma_{1}, \bar{x}_{2}, \sigma_{2}, ... ,\bar{x}_{60}, \sigma_{60}
+\]
+\\
+\[
+\eta = \frac{A}{\frac{epoch_{j}}{epoch_{max}} + 1}
+\]
+\\
+\[
+w_{i,j} \sim N(0, \frac{1}{\sqrt{inputs_{j}}})
+\]
+\\
+\[
+w_{i,j} \leftarrow \frac{w_{i,j}}{\sigma_{j}}
+\]
+\\
 Typically DNNs are pretrained layerwise by treating each layer as a 
 Restricted Boltzmann Machine (RBM), a technique which we will implement for this project. \\
 
