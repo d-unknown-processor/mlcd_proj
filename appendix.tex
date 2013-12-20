@@ -479,6 +479,19 @@ serves as the training, dev, and test sets.
 Each record contains heart rate for an ICU patient with SIRS, severe sepsis or septic shock, with at least
 12 hours preceding the event.
 
+\section{Discussion and Future Work}
+
+In this project we used heart rate exclusively to distinguish between sepsis states. However, results from the HMM tagger demonstrate
+that while it is possible to distinguish between SIRS and the septic shock, it is difficult to distinguish between the different types
+of sepsis (eg, severe sepsis and septic shock). Physiological data has predictive power, but additional representations and possibly additional signals may be beneficial. For instance, early predictive ability of the neural network may be applified by augmenting  heart rate with respriratory rate and blood pressure.
+\\
+\\
+Integration of the three components of this project is an important, but currently unmet goal of this project. Ideally, each component of
+this project will interact with eachother in a pipeline. For instance, the HMM tag sequence can be interpreted as categorical features and 
+input to the neural network. Alternatively, the probability of observation sequence under each HMM model can be directly used as input into
+the decision policy system. The output of the neural network are conditional probabilities which can serve as input into the decision policy 
+system.
+
 \bibliographystyle{plain}
 
 \bibliography{PhysMod,dnn,ref}
