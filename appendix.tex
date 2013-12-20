@@ -31,6 +31,7 @@
 \usepackage{multicol,parskip}
 \usepackage{graphicx,booktabs}
 \usepackage{tikz}
+\usetikzlibrary{arrows,automata}
 \usepackage{caption}
 \usepackage{subcaption}
 \usetikzlibrary{bayesnet}
@@ -207,7 +208,7 @@ The goal of this section is to detect hidden states over the time-series data fo
 \subsection{Related Works}
 As noted in our proposal, the prognosis of septic shock in critically ill patients has a lot of variability. There is no single monolithic notion of septic shock \cite{Shavdia2007} . There are several methods to approach feature discovery in time series data of this nature. \cite{Esbroeck2012hrt}  applied symbolic aggregate approximation SAX \cite{Lin2003sax} on physiological time series data. More recently, Time series topic models have also been developed, \cite{SariaThesis2011} these work directly on continuous time domain signals and extract latent motifs. In our approach, we would like to investigate an HMM based approach, to allow a hidden state to emit a vector observation for a single time instance, where each element in the observation vector represents the observation of each channel of data (ECG, blood pressure, oxygen saturation etc).
 \subsection{Contribution}
-The dataset contains patient heart rate data at a frequency of 2 Hz. Each sample has been obtained by computing statistics over a 2 minute window from a the original heart rate data. Thus, every 120th sample represents statistics from a non-overlapping region from the original data. The first task is to extract these samples per patient record. We intend to find hidden states that best explain this lower resolution data. Each state of our HMM model will cover a wider time window, our current estimate for length of observation window per state is 30 minutes.\\
+The dataset contains patient heart rate data at a frequency of 2 Hz. Each sample has been obtained by computing statistics over a 2 minute window from a the original heart rate data. Thus, every 120th sample represents statistics from a non-overlapping region from the original data. The first task is to extract these samples per patient record. We intend to find hidden states that best explain this lower resolution data. Each state of our HMM model will cover a wider time window, our current estimate for length of observation window per state is 10 minutes.\\
 We also intend to extend the HMM to a coupled HMM where the second set of observations would represent blood pressure, temperature or oxygen saturation. Ideally the second set of observations would be in close time sync with the Heart rate data. This would be a factor in deciding which data stream (temperature, blood pressure or oxygen saturation) we would use for the second observation layer in the coupled HMM. Another factor would be the availability of these streams for all patient records. \\
 \subsection{Learning Problem}
 We propose to learn a HMM and then extend it to a coupled HMM. The 2 layers of observation are heart rate and blood pressure, temperature or oxygen saturation.  We intent to learn the states sequence that would best explain the patient records. Below is a representation of this coupled HMM, with each variable defined.\\
@@ -221,20 +222,80 @@ We propose to learn a HMM and then extend it to a coupled HMM. The 2 layers of o
 \label{fig:coupled_hmm_fig}
 \end{figure}
 \begin{align*}
-O^1 &= o^1_{0}, \ldots,o^1_{T},   \text{sequence of heart rate observations (statistics from a 30 min time window)}\\
+O^1 &= o^1_{0}, \ldots,o^1_{T},   \text{sequence of heart rate observations (statistics from a 10 min time window)}\\
 O^2 &=o^2_{0}, \ldots,o^2_{T},  \text{sequence of blood pressure or oxygen saturation}\\
 Z &=  z_{0}, \ldots,z_{T}, \text{sequence of ${O^2}$ related states}\\
 Y &=  y_{0}, \ldots,y_{T},  \text{sequence of ${O^1}$ related states}\\
 \end{align*}
+For this project deliverables, this model has been scaled down to a single HMM. Experiments were done to infer the feasibility of extracting useful information for prediction.\\
 \subsubsection{State Priors}
-Using appropriate priors and initial values for states is crucial to restrain the system from straying away from what might be explanatory data. We intend to encode some of our prior intuitions in this model in the following manner. Let ${Y}$ represent the states for heart rate observations over the patient record. We have the following insights from the data that we would like to encode.\\
+The goal in this section is to provide an initial transition structure of the HMM model. The transition structure is can be depicted by figure 2.This automata shows that each patient starts from one of $n$ possible $Pre$ states. The $Pre$  states can be thought of as 'healthy' states before the $Onset$ of any of the 3 conditions that are being modeled. Of course there is no real 'healthy' state since all the records are from patients in the ICU. From each of the $Pre$ states the model can transition of any of the other $Pre$ states or it can transition to the $Onset$ state. This state, as the name suggests, is the onset of the condition being modeled. For a 'Sirs' patient , this state would signify the patterns in heart rate just before the a clinician can assign the label of 'Sirs' to the patient. This transition model suggests that once a patient is in the $Onset$ state they will continue to remain here until the $Post$ state. The $Post$ state can be thought of a the observations of patient heart heart just after they have been identified with one of the 3 conditions.
+In the current model, a state can emit observations of a 10 minute window. Since the data has been down sampled to 1 sample per minute this results in each state benign a 10 dimensional mean vector, and a 10x10 dimensional covariance matrix.
+\begin{figure}
+\begin{center}
+\begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=2.8cm,
+                    semithick]
+  \tikzstyle{every state}=[fill=white,draw=gray,text=black]
+
+  \node[initial,state] (A)                    {$init$};
+  \node[state]         (Pre2) [right of=A] {Pre1};
+  \node[state]         (Pre1) [above of=Pre2] {Pre2};
+  \node[state]         (Pre3) [below of=Pre2] {Pre3};
+  \node[state]         (Onset) [right of=Pre2] {Onset};
+  \node[state]         (Post) [right of=Onset]  {Post};
+
+  
+
+  \path (A) edge        node {$s$} (Pre1)
+            edge              node {} (Pre2)
+            edge              node  {}(Pre3)
+        (Pre1) edge [loop above] node {$p$} (Pre1)
+            edge  [bend left]node {$p$} (Pre2)
+            edge  [bend left] node {$p$} (Pre3)
+            edge  node {$o$} (Onset)
+         (Pre2) edge [loop above] node  {}(Pre2)
+            edge  node{} (Pre1)
+            edge   node {} (Pre3)
+            edge  node  {}(Onset)
+         (Pre3) edge [loop below] node{}(Pre3)
+            edge  [bend left]node  {}(Pre2)
+            edge  [bend left] node{} (Pre1)
+            edge  node{}  (Onset)
+        (Onset) edge [loop above] node {$po$} (Onset)
+        (Onset) edge  node {$po$} (Post)
+        (Post) edge  [loop above] node {$e$} (Post);
+\end{tikzpicture}
+\end{center}
+ \caption{Initial transition structure of HMM model}
+\end{figure}
+Using appropriate initial values for states is crucial to restrain the system from straying away from what might be explanatory data. We intend to encode some of our prior intuitions in this model in the following manner. Let ${Y}$ represent the states for heart rate observations over the patient record. We have the following insights from the data that we would like to encode.\\
 1. Bootstrap from Patient Records: Each patient record has a time stamp representing the presence of SIRS, Sepsis, Severe Sepsis or Septic Shock. While this time stamps are not exact (that is, they are marked when the clinician happens to observe the symptoms and there is no guarantee that it was the precise moment of onset) we can still get statistics from the time region surrounding the clinicians observation of the symptoms. Using this technique we can get good initial guesses for statistics (such as means, and variances i.e. modeling the observation as a Guassian) for 4 states. It might also be preferable to model the observation given the state as a Beta distribution as we know that Heart rate can never be negative (which a gaussian in theory will allow).\\
-2. Low Heart Rate Variability: Apart from the 4 states with we intend to bootstrap our model with states that have priors to restrict their parameters. One of the key insights regarding the onset of septic shock is reduction in heart rate variability. This informs us that one of the statistics that we need to compute from each 30 min time window should be a good indication of variability. Thus, simply getting mean heart rate for a 30 min duration would not be a good statistic. We intend to initialize a "Low Variability" state to capture this trend.
-3. High Heart Rate Variability: The opposite state from the pervious would be the "High Variability" state where the 30 min window shows significant variation.\\
-4. Reduction in Variability State: This state would be initialized such that there is variability across the earlier samples which slowly decline as we reach the end of the time window. One way to achive this is to place a prior over the slope of a statistic such as change in variable from beginning of window to the end. A negative slope indicates reduction of variability.\\
-Similar set of priors and initialization methods can be applied to the states corresponding to the ${Z}$ chain as well. It's important to note that some experimentation would be required to get a sense of these priors, they should be restrictive enough to coerce the model in the general direction we want, but also allow for discovery of states, and states sequences. We do not have plans for priors over state transitions.
+2. Low Heart Rate Variability: Apart from the 4 states with we intend to bootstrap our model with states that have priors to restrict their parameters. One of the key insights regarding the onset of septic shock is reduction in heart rate variability. This informs us that one of the statistics that we need to compute from each 10 min time window should be a good indication of variability. Thus, simply getting mean heart rate for a 10 min duration would not be a good statistic. We intend to initialize a "Low Variability" state to capture this trend.
+3. High Heart Rate Variability: The opposite state from the pervious would be the "High Variability" state where the 10 min window shows significant variation.\\
+4. Reduction in Variability State: This state would be initialized such that there is variability across the earlier samples which slowly decline as we reach the end of the time window. One way to achieve this is to place a prior over the slope of a statistic such as change in variable from beginning of window to the end. A negative slope indicates reduction of variability.\\
+\subsubsection{Model Training}
+One way to capture all of these aspects is to initialize the mean and covariances of these states directly from the data. The $Pre$ states got their mean and variances from the first 10 min of data from each patient. The assumption here is that the beginning of a patient record is the time when they are relatively 'healthy' compared to the rest of their trajectory. In the figure above multiple $Pre$ states are shown, this is achieved by  perturbing the mean and setting it as the initial value for another state. This way the HMM can be modeled with an arbitrary number of states. The $Onset$ mean and covariance was obtained by computing the mean and covariance of 10 min windows just before the disease time stamp. The same was done to obtain the $Post$ state, except this represents the 10 min time window just after the disease label. We found that the initial states, actually did not appear to capture these trends. Since they were obtained by average across all patients with a particular disease condition, but after few iterations of EM over the model the mean values of the states seemed to show distinct forms.\\
+%%%%%%%%
+%% Show before after em states here
+%%%%%%%%%
 
+In the figure above (left) we see the means for 6 possible $Pre$ states for the Sirs condition. After 20 iterations of EM over the model we see the states each take on a specific characteristic(above right). 2 of the states represent high heart rate deviations, while 2 other represent low heart rate deviation. The most interesting states are those that capture the interesting changes in the heart rate. The Green line shows a 10 min window where the heart rate deviation is dropping and the purple line captures the opposite trend. With longer time windows it might be possible to capture more interesting patterns in this data.\\
 
+Selection of number of states and selection of number of iterations are currently arbitrary. They both represent the extent to which the HMM models the training data. Increasing number of states and increasing the number of iterations could both lead to over fitting to the training data. To study to the performance of the model while keeping this is mind, a number of models each with different number of states and different number of iterations where trained. Thus each condition model (Sirs, Severe Sepsis and Septic Shock) 
+the number of states ranged from 4 to 20, and the number of iterations from 2 to 100. 
+\subsubsection{Evaluation}
+Each trained state represents a characteristic trajectory over the window of observation.  Given a new observation sequence we can compute the best sequence of states that can be assigned to the observation sequence. This is also in a sense representing the original heart rate deviation as a series of interpretable states. But what is the predictive power of these model? After all any data will be fit by the EM algorithm as much as it can, and this will automatically result in a number of states. But how meaningful are these states in the context of prediction?\\
+In an attempt to answer these questions, we tried to predict the instances of Septic Shock Vs Severe Sepsis Vs Sirs in the development data set. The assumption here is that each of these condition will have subtly different trajectories that can be detected before the onset stage. These subtle differences in trajectories should be captured by the Pre states of each model. Given a new unseen observation sequence, we can compute its forward probability under a model.  We choose the forward probability instead of the Viterbi probability because the Viterbi probability only represents the best state sequence, while forward probability is the sum of all possible state sequences a model can assign to the observation. A model that more closely fits the data would have higher forward probability.\\
+
+A unseen development data set was created. Each condition model model that was trained was allowed to 'see' the initial observations of the unseen data. The range of initial observation were from 0-10 minutes, all the way to 0-1000 minutes in 20 minute increments. Using each initial observations a winning model was picked based on forward probability of the observation under that model. For example for patient 'A' the first 10 minutes of data was passed thought the Sirs, Severe Sepsis and Septic Shock models, if the Septic Shock model recorded that highest forward probability then its equivalent to predicting that patient 'A' is more likely to get Septic Shock. Clearly is more more the observation sequence is seen by each model, more reliable the forward probability estimates would be (in terms of relative likelihood). This trend is confirmed below by the plot of precision and recall of prediction of each model.
+
+%%%%%%%%%%
+%% insert precision recall plot here
+%%%%%%
+We can see that when small amounts of the observation is shown to each model (< 200 min) there is lot of fluctuation in the prediction. This makes sense because there is not enough data to get a reliable forward probability estimate. There is more chance of a model getting lucky since is just happened to have a state or two that matches closely with the small portion of data seen. We see that as the observations shown to the models increases there is more consistent prediction. Not only is the prediction more consistent, we also see fairly high precision and recall for 2 of the 3 conditions. The prediction of Septic Shock was made with a precision of ~0.7 and a recall of ~0.65, given that this is a three way prediction these represents accuracy substantially above chance. The figure was obtained by using models trained with 15 states and training was truanted at 100 iterations.\\
+
+\subsubsection{Discussion}
+We can also see that Severe Sepsis was never predicted. This results in very poor precision and recall for that class. This also makes sense because this condition is like a intermediate condition between Sirs and Septic Shock. This frame could not easily learn the subtle differences that separate Severe Sepsis from Sirs and Septic Shock.
 
 \section{Reliable Classification}
 
