@@ -152,7 +152,6 @@
 \newcommand{\T}{\mathbf{T}}
 \renewcommand{\S}{\mathcal{S}}
 \renewcommand{\th}{t_0}
-\renewcommand{\v}{\mathbf{v}}
 \newcommand{\w}{\mathbf{w}}
 \newcommand{\W}{\mathbf{W}}
 \newcommand{\p}{\mathbf{p}}
@@ -580,7 +579,7 @@ If we have a decision policy without a notion of refusing to predict, then ideal
 \subsection{Septic Shock Early Detection}
 
 % TASK DESCRIPTION
-We apply our method to the task of early prediction of septic shock. We are given the output from an SVM that predicts whether or not a person has septic shock and has a corresponding label: not septic shock, yes septic shock, and uncertain. A patient is labeled as having septic shock based on when a doctor records it in the EMR. However, this provides a noisy label since it does not denote the true onset of septic shock, but rather when a doctor treated the patient for septic shock. Moreover, developing septic shock is a gradual process and is challenging to identify the precise moment of septic shock onset. In order to account for this, the twelve hours preceding the documented septic shock onset are labeled as uncertain. A patient may also be labeled as uncertain if there are confounding factors that prevent us from knowing whether or not they developed septic shock. For instance, the caregiver may decide to proactively administer antibiotics before confirming that a patient has fully developed septic shock. If the patient does not subsequently develop septic shock, then it is unknown whether the patient never would have developed septic shock or whether they were going into septic shock, but the medical intervention stopped the progression to septic shock. 
+We apply our method to the task of early prediction of septic shock. We are given the output from an SVM that predicts whether or not a person has septic shock and has a corresponding label: not septic shock, yes septic shock, and uncertain \cite{Paxton2013}. A patient is labeled as having septic shock based on when a doctor records it in the EMR. However, this provides a noisy label since it does not denote the true onset of septic shock, but rather when a doctor treated the patient for septic shock. Moreover, developing septic shock is a gradual process and is challenging to identify the precise moment of septic shock onset. In order to account for this, the twelve hours preceding the documented septic shock onset are labeled as uncertain. A patient may also be labeled as uncertain if there are confounding factors that prevent us from knowing whether or not they developed septic shock. For instance, the caregiver may decide to proactively administer antibiotics before confirming that a patient has fully developed septic shock. If the patient does not subsequently develop septic shock, then it is unknown whether the patient never would have developed septic shock or whether they were going into septic shock, but the medical intervention stopped the progression to septic shock. 
 
 We use a sigmoid function $S(x) = \frac{1}{1+e^-x}$ to map the values output from the SVM to the range $[0,1]$ and interpret this as a univariate potential that a patient has septic shock at that time. Let $\pi_t$ represent the univariate potential at time $t$.
 
