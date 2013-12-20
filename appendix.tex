@@ -429,15 +429,15 @@ Each record contains heart rate for an ICU patient with SIRS, severe sepsis or s
 \section{Reliable Classification: deriving the optimal decision policy}
 
 \subsection{Introduction}
-
+Since we are interested in applying our system in a clinical setting, we need a way to define a decision policy that makes decisions relative to a clinician's tolerance for false positives and false negatives. To achieve this we derive an optimal decision policy over time that uses an asymmetric cost function to incorporate clinical concerns about the relative cost of different misclassifications. We also introduce the idea of refusing to predict. Instead of forcing the system to always choose a class, we add a state that corresponds to saying ``I don't know". This state provides the clinician with additional information that would not be captured in a traditional classification model. When the model refuses to predict, it is essentially telling the clinician that it needs more information in order to make its decision because it is not sufficiently confident in any one class. In this section we demonstrate how to derive and implement this decision policy over a time sequence and show its application first to synthetic data and then to decision values output from an SVM trained to do septic shock prediction.
 
 \subsection{Related Work}
 
-By adding the notion of rejection (i.e.\  refusing to predict), the classifier is able to avoid misclassification, by instead refusing to predict. As stated by Chow \cite{Chow1970} the optimal strategy is one that minimizes the rate of rejection. For a single time point, Chow shows how to formulate the decision policy of when to reject in terms of a rejection threshold. He similarly formulates the error in terms of that same threshold by noting that the expected cost of error is the expected cost of rejecting minus the expectation of being correct. This rejection threshold can then relate the expected cost of rejecting to the expected cost of misclassification and allow the user to trade off between them. 
+Adding the notion of rejection (i.e.\  refusing to predict) allows the classifier to avoid misclassification by instead refusing to predict. As stated by Chow \cite{Chow1970} the optimal strategy is one that minimizes the rate of rejection. For a single time point, Chow shows how to formulate the decision policy of when to reject in terms of a rejection threshold. He similarly formulates the error in terms of that same threshold by noting that the expected cost of error is the expected cost of rejecting minus the expectation of being correct. This rejection threshold can then relate the expected cost of rejecting to the expected cost of misclassification and allow the user to trade off between them. 
 
 Grall-Ma\"{e}s and  Beauseroy \cite{GrallMaes2009} extend the optimal decision framework by allowing an observation to be assigned to a subset of the classes. Assigning an observation to the set of all classes corresponds to refusing to predict and assigning an observation to a set with only one class corresponds to predicting that class without ambiguity. Grall-Ma\"{e}s and  Beauseroy derive the optimal decision policy for assigning an observation to a set given a cost matrix and performance constraints. Performance constraints are, for example, the false positives for this class must be below a given threshold or the false positives for a given subset must be below this level.
 
-Santaniello et al.\ \cite{Santaniello2012} formulate a transition detection problem where they learn a decision policy to decide when a change of state has occurred in a time sequence. In particular, they derive a decision policy for quickest detection, where they want to detect the change point as early as possible with sufficient confidence. To encourage early detection, they include the expected distance of the current time from the actual change time in the cost function. 
+Santaniello et al.\ \cite{Santaniello2012} formulate a transition detection problem where they learn a decision policy to decide when a change of state has occurred in a time sequence. In particular, they derive a decision policy for quickest detection, where they want to detect the change point as early as possible with sufficient confidence. To encourage early detection, they include the expected distance of the current time from the actual change time in the cost function.
 
 \subsection{General Problem Set Up}
 
@@ -566,59 +566,16 @@ Once we have $\alpha_{t,j} $, if we add a new observation $x_{t+1}$, we can easi
 
 \subsection{Simulation with synthetic data}
 
-We define four classes, where the data from each class is sampled from a Gaussian with means 0,3,6,8 and variances 3,3,2,1 respectively. Each sample is 100 time steps long and there are 1000 samples. At each time step the sample is drawn from one of the four classes and the sample transitions between classes based on a given transition matrix and initial probabilities.
+In order to test the reliable classification, we define four classes, where the data from each class is sampled from a Gaussian with means 0,3,6,8 and variances 3,3,2,1 respectively. Each sample is 250 time steps long and there are 1000 samples. At each time step the sample is drawn from one of the four classes and the sample transitions between classes based on a given transition matrix and initial probabilities.
 
-We use a 2DBN implemented with Kevin Murphy's BayesNet Toolbox for Matlab to calculate the marginal probabilities. Since we focus on learning the decision policy rather than the probability estimation task, we provide the 2DBN with the transition matrix, class-specific Gaussians, and initial probabilities used to generate the data.
 
-We also calculate the distributions over classes conditioned on the observations using the above CRF derivation. Since we know the four distributions that the data is drawn from, we define four feature functions $f_j(y) = \one(y=j)$ for $j \in \bar{C}$ with respective weights $\lambda_j = P(x | \mu_j, \Sigma_j)$ with a normal PDF.  We also have feature functions for each possible pair of classes $i,j \in \bar{C}$ where  $f_{i,j} = \one(y_{t-1}=i,y_t=j)$ and $\lambda_{i,j} = Ti,j$, the value from the transition matrix.
+We use Kevin We use a 2DBN implemented with Kevin Murphy's BayesNet Toolbox for Matlab to calculate the marginal probabilities. Since we focus on learning the decision policy rather than the probability estimation task, we provide the 2DBN with the transition matrix, class-specific Gaussians, and initial probabilities used to generate the data.
 
-In order to test the reliable classification, we generate synthetic data from four overlapping Gaussians, where each Gaussian corresponds to a different class.
-
-We use Kevin Murphy's BayesNet and CRF Matlab toolkits to implement a model to compute $\hat{Y}$ for the synthetic data. We then use these marginal probabilities at each time step to implement the learning problem as described below. For the simulation we do address the situation where we have a doctor intervention (i.e.\ $R=\emptyset$). 
+We also calculate the distributions over classes conditioned on the observations using the above CRF derivation. Since we know the four distributions that the data is drawn from, we define four feature functions $f_j(y) = \one(y=j)$ for $j \in \bar{C}$ with respective weights $\lambda_j = P(x | \mu_j, \Sigma_j)$ with a normal PDF.  We also have feature functions for each possible pair of classes $i,j \in \bar{C}$ where  $f_{i,j} = \one(y_{t-1}=i,y_t=j)$ and $\lambda_{i,j} = Ti,j$, the value from the transition matrix. For the simulation we do not address the situation where we have a doctor intervention (i.e.\ $R=\emptyset$). 
 
 We will consider how different parameterizations of the cost matrix allow us to trade off between the cost of misclassification and the cost of refusing to predict. We will also investigate how to set the cost matrix to encourage early detection.
 
-\subsection{Learning Problem}
-Our goal is to learn a decision policy that allows us to minimize the expected loss over the entire time sequence of observations.
-The expected posterior loss at time $t$ of making decision $u_t=i$ given that the true label is $y_t=j$ and the previous decision was $u_{t-1}=h$ as follows:
-
-\begin{align}
-\E[L(u_t|y_t, u_{t-1})] &= \min_{u_t} \Big\{ \sum_{i \in \hat{C}} \sum_{j \in \bar{C}} S_{i,j}^{(t)} P(y_t=j)P(u_t=i|u_{t-1})\I(u_t=i)\Big\}\\
-&= \min_{u_t \in \hat{C}} \Big\{ \sum_{j \in \bar{C}} S_{u_t,j}^{(t)} P(y_t=j)P(u_t|u_{t-1})\Big\}
-\label{eqn:exploss}
-\end{align}
-
-We use dynamic programming to learn the optimal decision policy over the time sequence, with a discounting factor $\beta \in [0,1]$ to adjust the importance of past observations.
-
-Let $V(y_T)$ be the value of the expected posterior loss minimized by a decision policy $\{u_t\}_{t=0}^{T}$. At time $T$ we make the decision $u_T$ that is the argmin of (\ref{eqn:bellman}).
-
-\begin{align}
-V(y_T) &= \min_{\{u_t\}_{t=0}^{T}} \Big\{ \sum_{t=0}^T \beta^{T-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
-&= \min_{u_T \in \hat{C}} \Big\{  \beta^{0}\E[L(u_T|y_T, u_{T-1})] + \min_{\{u_t\}_{t=0}^{T-1}} \beta \sum_{t=0}^{T-1} \beta^{T-1-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
-&= \min_{u_T \in \hat{C}} \Big\{  \E[L(u_T|y_T, u_{T-1})] + \beta V(y_{T-1})\Big\} \label{eqn:bellman}
-\end{align}
-
-From this we see that the system will either make the decision $u_T = c \in \bar{C}$ that minimizes the expected loss over the sequence or it will refuse to predict, equivalent to choosing $u_T = C+1$. 
-
-Computing the expected loss with dynamic programming, where we maintain a vector of the class costs from the previous time step, requires $C(C+1)+4$ operations at each time point, so the overall complexity is $O(TC^2)$. For space efficiency, it is only necessary to maintain the cost vector from the previous time step.
-
-
-
-\subsection{Cost Matrix}
-Define the cost matrix $S^{(t)}_{i,j}$ to be $0/1$ loss where $S^{(t)}_{i,j} = 1$ if $i =j$ and $0 otherwise$ for $i,j \in \{1\ldots C\}$ and define $S^{(T)}_{C+1,j} = \alpha $ $\forall j \in \bar{C}$, $\alpha \in (0,1]$.
-In the case where we have a uniform cost of refusing to predict, $S^{(T)}_{C+1,j} = \alpha $ $\forall j \in \bar{C}$, we will refuse to predict if the following relationship holds
-\begin{align}
-\frac{\E[L(C+1|y_T, u_{T-1})]}{\E[L(c|y_T, u_{T-1})]} &< 1\\
-\frac{\sum_{j \in \bar{C}} S_{C+1,j}^{(T)} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &< 1\\
-\frac{\alpha\sum_{j \in \bar{C}} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &< 1\\
-\frac{\sum_{j \in \bar{C}} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &< \frac{1}{\alpha}\\
-\frac{\sum_{j \in \bar{C}} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &\geq \alpha
-\end{align}
-
-We then look at the total loss, accuracy, error, and refusal rate over the dataset as a function of $\alpha$. We will also look at it where we only vary $\alpha$ for a single class.
-
-\subsection{Evaluation}
-If we have a decision policy without a notion of refusing to predict, then ideal behavior of our decision policy with rejection is to refuse to predict whenever the previous decision policy made an incorrect classification and to predict the same class whenever it made a correct prediction. In order to evaluate different settings of the cost matrix and other parameters, we compare the fraction of mistakes that are rejection in the decision policy with rejection and the fraction of correct classifications that are correctly classified. Since we use the same policy for choosing the best cost class among the classes for both the decision policy with and without rejection, there will not be mistakes that become correct answers in the new model and there will not be correct answers that become incorrect. 
+If we have a decision policy without a notion of refusing to predict, then ideal behavior of our decision policy with rejection is to refuse to predict whenever the previous decision policy made an incorrect classification and to predict the same class whenever it made a correct prediction. In order to evaluate different settings of the cost matrix and other parameters, we compare the fraction of mistakes that are rejection in the decision policy with rejection and the fraction of correct classifications that are correctly classified. Since we use the same policy for choosing the best cost class among the classes for both the decision policy with and without rejection, there will not be mistakes that become correct answers in the new model and there will not be correct answers that become incorrect. The poster (slide 22) compares the decision policy for different costs of class substitution and refusing to predict and demonstrates how the decision policy can make different tradeoffs between tolerances for false positives, false negatives, and refusing to predict.
 
 \subsection{Septic Shock Early Detection}
 
@@ -627,17 +584,35 @@ We apply our method to the task of early prediction of septic shock. We are give
 
 We use a sigmoid function $S(x) = \frac{1}{1+e^-x}$ to map the values output from the SVM to the range $[0,1]$ and interpret this as a univariate potential that a patient has septic shock at that time. Let $\pi_t$ represent the univariate potential at time $t$.
 
-Let $H$ denote healthy/not septic shock and let $K$ denote septic shock. There are four possible class sequences $(y_{t-1},y_t)$ that occur in the dataset: $(H,H), (H,K), (K,H), (K,K)$. We define the probability $P(y_{t-1}=H, y_t=K)$ as the fraction of patients who develop septic shock and $P(y_{t-1}=H, y_t=H) = 1 - P(y_{t-1}=H, y_t=K)$. In the dataset we never observe a patient transition from septic shock to not septic shock. Currently we have $P(y_{t-1}=K, y_t=K) = 1$ and  $P(y_{t-1}=K, y_t=H) = 0$.
+Let $H$ denote healthy/not septic shock and let $K$ denote septic shock. There are four possible class sequences $(y_{t-1},y_t)$ that occur in the dataset: $(H,H), (H,K), (K,H), (K,K)$. We define the probability $P(y_{t-1}=H, y_t=K)$ as the fraction of patients who develop septic shock and $P(y_{t-1}=H, y_t=H) = 1 - P(y_{t-1}=H, y_t=K)$. In the dataset we never observe a patient transition from septic shock to not septic shock. Currently we have $P(y_{t-1}=K, y_t=K) = 1$ and  $P(y_{t-1}=K, y_t=H) = 0$, which leads to a transition matrix $T = \begin{bmatrix}0.995&0.005\\0&1\end{bmatrix}$
 
-\section{Discussion and Future Work}
+In the poster slides, we show four examples of the the decision policy model applied to the decision values output by the SVM. For each example we show the observations progressing in time from left to right. From top to bottom there is the decision value output by the SVM mapped to $[0,1]$, the marginal probability of each class given the observations up until that time point inferred from the CRF, the true labels of the data, and the labels that the decisions made by the decision policy. All of these examples were generated using 0/1 loss for misclassification and a uniform 0.3 cost of refusing to predict.
+
+As can be seen in all of the examples, the CRF substantially smooths out the probabilities of each class. The probability of the more likely class quickly approaches 1. This is most likely caused by the transition matrix, which makes it very unlikely to change between classes. As a result, seeing a few samples in a row with significant probability of one of the classes causes it to put extremely high probability on the sample belonging to that class.
+
+In example one (slide 25), we see that not septic shock starts out as the most likely class, but around sample 30 the decision values output by the SVM rank septic shock as the more likely state. However, because the CRF incorporates temporal information, it smooths away the increased probability of septic shock and the decision policy continues to correctly select not septic shock. We could adjust the systems sensitivity by increasing its tolerance for false alarms on septic shock, which corresponds to decreasing the cost of predicting septic shock when the true label is not septic shock. Alternatively, we could lower the cost of refusing to predict, which would allow us to maintain the same false alarm rate, but still alert the clinicians that the patient may be entering septic shock or that additional evaluation is needed.
+
+In example two we see another example where the CRF smooths out the class probabilities and removes some of the uncertainty from the raw decision values by incorporating temporal information.
+
+In example three, there is an example of a patient who is in septic shock; however the decision values output by the SVM still initially rank not septic shock as the more likely class. The high initial probability on not septic shock and low probability of transitioning from not septic shock to septic shock cause the CRF to put high weight on not septic shock, which causes the system to initially misclassify it as not septic shock. Later, the probability of septic shock increases and the decision policy starts choosing septic shock after a short period of refusing to predict. Again, the precise behavior of the decision policy could be tweaked to allow for more or less false positives and false negatives and to also adjust the frequency of not predicting.
+
+Example four shows an instance where the true label of the patient was unknown. This could be caused by several scenarios such as the patient being preemptively prescribed antibiotics, thus masking whether or not they would have developed septic shock. Although the true label is uncertain, the SVM and CRF rank septic shock as the more likely state. The decision policy initially predicts not septic shock and then refuses to predict, probably due to the overly high initial probability of not septic shock, but then predicts septic shock, until it later sees an increase in the probability of not septic shock.
+
+\subsection{Discussion and Future Work}
+
+One of the problems with the CRF probabilities is that it does not have a global notion of how long the patient has been in a given state. Instead of modeling how likely we are to stay in septic shock for a given amount of time, we simply model how likely are we to transition from septic shock to septic shock. Modifying the model from a CRF to a semi-Markov CRF would allows us to model the duration of each state. Incorporating information about the likely duration of septic shock could help prevent situations where a patient switches between septic shock and not septic shock. Moreover it would allow us to incorporate clinical knowledge about how long it takes from the first observation of SIRS to transition into septic shock or from severe sepsis to septic shock once we transition to modeling the four classes instead of a binary classification task.
+
+Additionally, the transition matrix and other parameters in the CRF and cost function are currently hand-defined and tweaked. In future work we would like to learn these parameters from the data. This could also help correct the model's tendency to over estimate the probability of the current class.
+
+\section{Overall Discussion and Future Work}
 
 In this project we used heart rate exclusively to distinguish between sepsis states. However, results from the HMM tagger demonstrate
 that while it is possible to distinguish between SIRS and the septic shock, it is difficult to distinguish between the different types
-of sepsis (eg, severe sepsis and septic shock). Physiological data has predictive power, but additional representations and possibly additional signals may be beneficial. For instance, early predictive ability of the neural network may be applified by augmenting  heart rate with respriratory rate and blood pressure.
+of sepsis (e.g., severe sepsis and septic shock). Physiological data has predictive power, but additional representations and possibly additional signals may be beneficial. For instance, early predictive ability of the neural network may be applified by augmenting  heart rate with respiratory rate and blood pressure.
 \\
 \\
 Integration of the three components of this project is an important, but currently unmet goal of this project. Ideally, each component of
-this project will interact with eachother in a pipeline. For instance, the HMM tag sequence can be interpreted as categorical features and 
+this project will interact with each other in a pipeline. For instance, the HMM tag sequence can be interpreted as categorical features and 
 input to the neural network. Alternatively, the probability of observation sequence under each HMM model can be directly used as input into
 the decision policy system. The output of the neural network are conditional probabilities which can serve as input into the decision policy 
 system.
