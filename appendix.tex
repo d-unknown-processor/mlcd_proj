@@ -26,7 +26,7 @@
 \ProcessOptions\relax
 
 
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath, amssymb,bbold}
 \usepackage{amsfonts}
 \usepackage{multicol,parskip}
 \usepackage{graphicx,booktabs}
@@ -146,6 +146,7 @@
 \newcommand{\D}{\mathbb{D}}
 \newcommand{\I}{\mathbb{I}}
 \newcommand{\N}{\mathbb{N}}
+\newcommand{\one}{\mathbb{1}}
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\T}{\mathbf{T}}
 \renewcommand{\S}{\mathcal{S}}
@@ -236,81 +237,7 @@ Similar set of priors and initialization methods can be applied to the states co
 
 
 
-\section{Reliable Classification}
 
-\subsection{Problem Definition}
-\begin{figure}[ht]
-  \begin{center}
-    \begin{tabular}{cc}
-      \input{model_reclas}
-    \end{tabular}
-  \end{center}
-  \caption{Reliable Classifier model as a Bayesian network}
-\label{fig:reclas_bnet}
-\end{figure}
-
-
-\begin{align*}
-X &= x_0, x_1, \ldots, x_T \text{ sequence of observations}\\
-R &= r_0, r_1 \ldots, r_T \text{ sequence of clinical interventions}\\
-\hat{Y} &= \yh_0, \yh_1, \ldots, \yh_T \text{ sequence of predicted class labels, $\yh_i \in \{1,\ldots, C\}$}\\
-Y&=y_0,y_1,\ldots,y_T \text{ sequence of true labels, $y_i \in \{1,\ldots, C\}$}\\
-U&=u_0,u_1,\ldots,u_T \text{ a decision policy, $u_i \in \{1,\ldots, C, C+1\}$}\\
-S &\in \R^{C+1 \times C \times T}, S_{i,j}^{(t)} \text{ is the cost of choosing label $i$ instead of label $j$ at time $t$}\\
-\bar{C} &= \{1,\ldots, C\} \text{ set of possible classes}\\
-\hat{C} &= \{1,\ldots, C,C+1\} \text{ set of possible decisions}
-\end{align*}
-
-Our goal is to learn a decision policy that allows us to make the optimal decision at time $T$ given a sequence of observations and a user-defined cost function.
-
-At each time $t$ the system either chooses the class $c \in \{1,\ldots, C\}$ that minimizes the expected loss over the time sequence $0\ldots T$ or it refuses to make a decision, corresponding to choosing $c = C+1$. Each $\yh_t$ is a probability distribution over possible the possible classes $\bar{C}$. If there is a clinical intervention $r_t$ at the current time $t$, e.g.\ a doctor prescribes pressors or performs some other action that provides a diagnosis, we define $P(y_t=j)$ to be $P(y_t=j|r_t)$. However, since we are performing a continuous monitoring task, the majority of time points will not have a clinical intervention associated with it. In these cases we use the distribution from the classifier $\yh_t$ and define $P(y_t=j)$ to be $P(\yh_t=j|x_t, y_{t-1})$. We then feed the distribution $y_t$ to our classifier so that the predicted distribution over classes $\yh_{t+1}$ incorporates knowledge about clinical interventions into the classification process. Instead of defining the distribution $y_t$ as either $r_t$ or $\yh_t$, we could instead define it as a mixture of the two distributions based on our confidence in the classifier's predictions. 
-
-The decision $u_t$ is influenced by the distribution over all possible class labels $y_t$ and the previous decision $u_{t-1}$. The motivation for allowing the previous decision to influence the current decision is two-fold. First this can act as a smoothing function and capture the intuition that patients show a gradual transition from one disease state to the next, and prevents situations like repeatedly alternating between two disease states instead of staying in one state until the classifier is sufficiently confident to advance to a new disease state. The second benefit of this dependency between successive decisions is that it allows us to prevent overly long rejection periods, where the classifier continuously refuses to predict. We can do this by progressively down-weighting the probability of rejection given the history of rejection.
-
-\subsection{Related Work}
-
-By adding the notion of rejection (i.e.\  refusing to predict), the classifier is able to avoid misclassification, by instead refusing to predict. As stated by Chow \cite{Chow1970} the optimal strategy is one that minimizes the rate of rejection. For a single time point, Chow shows how to formulate the decision policy of when to reject in terms of a rejection threshold. He similarly formulates the error in terms of that same threshold by noting that the expected cost of error is the expected cost of rejecting minus the expectation of being correct. This rejection threshold can then relate the expected cost of rejecting to the expected cost of misclassification and allow the user to trade off between them. 
-
-Grall-Ma\"{e}s and  Beauseroy \cite{GrallMaes2009} extend the optimal decision framework by allowing an observation to be assigned to a subset of the classes. Assigning an observation to the set of all classes corresponds to refusing to predict and assigning an observation to a set with only one class corresponds to predicting that class without ambiguity. Grall-Ma\"{e}s and  Beauseroy derive the optimal decision policy for assigning an observation to a set given a cost matrix and performance constraints. Performance constraints are, for example, the false positives for this class must be below a given threshold or the false positives for a given subset must be below this level.
-
-Santaniello et al.\ \cite{Santaniello2012} formulate a transition detection problem where they learn a decision policy to decide when a change of state has occurred in a time sequence. In particular, they derive a decision policy for quickest detection, where they want to detect the change point as early as possible with sufficient confidence. To encourage early detection, they include the expected distance of the current time from the actual change time in the cost function. 
-
-
-\subsection{Contribution}
-For the task of sepsis prediction and continuous patient monitoring in general, we want to derive a generic optimal decision policy for time series data where we allow the system to refuse to predict. Moreover, we allow for a user-defined cost function that can be asymmetric, e.g.\ assigning different costs for false positives or negatives for different classes, and that can change over time. This task is different than transition detection in that we do not assume there is only one transition point and we do not assume that the subject even has to transition.
-
-
-\subsection{Simulation}
-
-In order to test the reliable classification, we generate synthetic data from four overlapping Gaussians, where each Gaussian corresponds to a different class.
-
-We use Kevin Murphy's BayesNet and CRF Matlab toolkits to implement a model to compute $\hat{Y}$ for the synthetic data. We then use these marginal probabilities at each time step to implement the learning problem as described below. For the simulation we do address the situation where we have a doctor intervention (i.e.\ $R=\emptyset$). 
-
-We will consider how different parameterizations of the cost matrix allow us to trade off between the cost of misclassification and the cost of refusing to predict. We will also investigate how to set the cost matrix to encourage early detection.
-
-\subsection{Learning Problem}
-Our goal is to learn a decision policy that allows us to minimize the expected loss over the entire time sequence of observations.
-The expected posterior loss at time $t$ of making decision $u_t=i$ given that the true label is $y_t=j$ and the previous decision was $u_{t-1}=h$ as follows:
-
-\begin{align}
-\E[L(u_t|y_t, u_{t-1})] &= \min_{u_t} \Big\{ \sum_{i \in \hat{C}} \sum_{j \in \bar{C}} S_{i,j}^{(t)} P(y_t=j)P(u_t=i|u_{t-1})\I(u_t=i)\Big\}\\
-&= \min_{u_t \in \hat{C}} \Big\{ \sum_{j \in \bar{C}} S_{u_t,j}^{(t)} P(y_t=j)P(u_t|u_{t-1})\Big\}
-\label{eqn:exploss}
-\end{align}
-
-We use dynamic programming to learn the optimal decision policy over the time sequence, with a discounting factor $\beta \in [0,1]$ to adjust the importance of past observations.
-
-Let $V(y_T)$ be the value of the expected posterior loss minimized by a decision policy $\{u_t\}_{t=0}^{T}$. At time $T$ we make the decision $u_T$ that is the argmin of (\ref{eqn:bellman}).
-
-\begin{align}
-V(y_T) &= \min_{\{u_t\}_{t=0}^{T}} \Big\{ \sum_{t=0}^T \beta^{T-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
-&= \min_{u_T \in \hat{C}} \Big\{  \beta^{0}\E[L(u_T|y_T, u_{T-1})] + \min_{\{u_t\}_{t=0}^{T-1}} \beta \sum_{t=0}^{T-1} \beta^{T-1-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
-&= \min_{u_T \in \hat{C}} \Big\{  \E[L(u_T|y_T, u_{T-1})] + \beta V(y_{T-1})\Big\} \label{eqn:bellman}
-\end{align}
-
-From this we see that the system will either make the decision $u_T = c \in \bar{C}$ that minimizes the expected loss over the sequence or it will refuse to predict, equivalent to choosing $u_T = C+1$. 
-
-Computing the expected loss with dynamic programming, where we maintain a vector of the class costs from the previous time step, requires $C(C+1)+4$ operations at each time point, so the overall complexity is $O(TC^2)$. For space efficiency, it is only necessary to maintain the cost vector from the previous time step.
 
 
 \section{Neural Networks for Sepsis Prediction}
@@ -478,6 +405,209 @@ The data for this task consists of heart rate sampled at 2 Hz derived from the M
 serves as the training, dev, and test sets. 
 Each record contains heart rate for an ICU patient with SIRS, severe sepsis or septic shock, with at least
 12 hours preceding the event.
+
+\section{Reliable Classification: deriving the optimal decision policy}
+
+\subsection{Introduction}
+
+
+\subsection{Related Work}
+
+By adding the notion of rejection (i.e.\  refusing to predict), the classifier is able to avoid misclassification, by instead refusing to predict. As stated by Chow \cite{Chow1970} the optimal strategy is one that minimizes the rate of rejection. For a single time point, Chow shows how to formulate the decision policy of when to reject in terms of a rejection threshold. He similarly formulates the error in terms of that same threshold by noting that the expected cost of error is the expected cost of rejecting minus the expectation of being correct. This rejection threshold can then relate the expected cost of rejecting to the expected cost of misclassification and allow the user to trade off between them. 
+
+Grall-Ma\"{e}s and  Beauseroy \cite{GrallMaes2009} extend the optimal decision framework by allowing an observation to be assigned to a subset of the classes. Assigning an observation to the set of all classes corresponds to refusing to predict and assigning an observation to a set with only one class corresponds to predicting that class without ambiguity. Grall-Ma\"{e}s and  Beauseroy derive the optimal decision policy for assigning an observation to a set given a cost matrix and performance constraints. Performance constraints are, for example, the false positives for this class must be below a given threshold or the false positives for a given subset must be below this level.
+
+Santaniello et al.\ \cite{Santaniello2012} formulate a transition detection problem where they learn a decision policy to decide when a change of state has occurred in a time sequence. In particular, they derive a decision policy for quickest detection, where they want to detect the change point as early as possible with sufficient confidence. To encourage early detection, they include the expected distance of the current time from the actual change time in the cost function. 
+
+\subsection{General Problem Set Up}
+
+\begin{figure}[ht]
+  \begin{center}
+    \begin{tabular}{cc}
+      \input{model_reclas}
+    \end{tabular}
+  \end{center}
+  \caption{Reliable Classifier model as a Bayesian network}
+\label{fig:reclas_bnet}
+\end{figure}
+
+
+\begin{align*}
+X &= x_0, x_1, \ldots, x_T \text{ sequence of observations}\\
+R &= r_0, r_1 \ldots, r_T \text{ sequence of clinical interventions}\\
+\hat{Y} &= \yh_0, \yh_1, \ldots, \yh_T \text{ sequence of predicted class labels, $\yh_i \in \{1,\ldots, C\}$}\\
+Y&=y_0,y_1,\ldots,y_T \text{ sequence of true labels, $y_i \in \{1,\ldots, C\}$}\\
+U&=u_0,u_1,\ldots,u_T \text{ a decision policy, $u_i \in \{1,\ldots, C, C+1\}$}\\
+S &\in \R^{C+1 \times C \times T}, S_{i,j}^{(t)} \text{ is the cost of choosing label $i$ instead of label $j$ at time $t$}\\
+\bar{C} &= \{1,\ldots, C\} \text{ set of possible classes}\\
+\hat{C} &= \{1,\ldots, C,C+1\} \text{ set of possible decisions}
+\end{align*}
+
+At each time $t$ the system either chooses the class $c \in \{1,\ldots, C\}$ that minimizes the expected loss over the time sequence $0\ldots T$ or it refuses to make a decision, corresponding to choosing $c = C+1$. Each $\yh_t$ is a probability distribution over possible the possible classes $\bar{C}$. If there is a clinical intervention $r_t$ at the current time $t$, e.g.\ a doctor prescribes pressors or performs some other action that provides a diagnosis, we define $P(y_t=j)$ to be $P(y_t=j|r_t)$. However, since we are performing a continuous monitoring task, the majority of time points will not have a clinical intervention associated with it. In these cases we use the distribution from the classifier $\yh_t$ and define $P(y_t=j)$ to be $P(\yh_t=j|x_t, y_{t-1})$. We then feed the distribution $y_t$ to our classifier so that the predicted distribution over classes $\yh_{t+1}$ incorporates knowledge about clinical interventions into the classification process. Instead of defining the distribution $y_t$ as either $r_t$ or $\yh_t$, we could instead define it as a mixture of the two distributions based on our confidence in the classifier's predictions. 
+
+The decision $u_t$ is influenced by the distribution over all possible class labels $y_t$ and the previous decision $u_{t-1}$. The motivation for allowing the previous decision to influence the current decision is two-fold. First this can act as a smoothing function and capture the intuition that patients show a gradual transition from one disease state to the next, and prevents situations like repeatedly alternating between two disease states instead of staying in one state until the classifier is sufficiently confident to advance to a new disease state. The second benefit of this dependency between successive decisions is that it allows us to prevent overly long rejection periods, where the classifier continuously refuses to predict. We can do this by progressively down-weighting the probability of rejection given the history of rejection.
+
+\subsection{Expected Loss}
+Define the expected posterior loss at time $t$ of making decision $u_t=i$ given that the true label is $y_t=j$ and the previous decision was $u_{t-1}=h$ as follows:
+
+\begin{align}
+\E[L(u_t|y_t, u_{t-1})] &= \min_{u_t} \Big\{ \sum_{i \in \hat{C}} \sum_{j \in \bar{C}} S_{i,j}^{(t)} P(y_t=j)P(u_t=i|u_{t-1})\I(u_t=i)\Big\}\\
+&= \min_{u_t \in \hat{C}} \Big\{ \sum_{j \in \bar{C}} S_{u_t,j}^{(t)} P(y_t=j)P(u_t|u_{t-1})\Big\}
+\label{eqn:exploss}
+\end{align}
+
+The cost matrix $S$ gives the user a way of making tradeoffs between false positives and false negatives and between refusing to predict and having less confidence in the predictions. Critically, we allow for an asymmetric cost function and we do not assume that the cost function is non-decreasing over time. Allowing for an asymmetric cost function enables the clinician to introduce class specific penalties for misclassification and for refusing to predict. This captures the belief that, in a clinical setting, not all mistakes are of the same importance. For instance, predicting that a patient is normal, when in fact they are in septic shock is a more serious mistake than predicting that a patient is normal when they actually meet the SIRS criteria. 
+
+A possible extension to the loss function is to add the entropy of the current probability distribution to the cost of predicting a given class or to subtract it from the cost of refusal. This would help prevent situations where a couple of classes share almost all of the probability mass, but are both equally costly, and thus it is unclear which the system should actually predict. Adding the entropy term would make it more expensive to make any prediction when there is high entropy in the probability distribution.
+
+\subsection{Deriving the Optimal Decision}
+
+Our goal is to learn a decision policy that makes the decision $u_T$ that minimizes the expected loss over the observations and interventions over time $0\ldots T$. We introduce a discount factor $\beta \in [0,1]$ to assign less weight to the expected loss of decisions made far in the past. For $\beta = 0$, we discount all but the expected loss of the most recent decision. For $\beta = 1$, we give the expected loss of all decisions equal weight.
+
+% Bellman equations to learn optimal decision
+
+Let $V(y_T)$ be the value of the expected posterior loss minimized by a decision policy $\{u_t\}_{t=0}^{T}$. At time $T$ we make the decision $u_T$ that is the argmin of (\ref{eqn:bellman}).
+
+\begin{align}
+V(y_T) &= \min_{\{u_t\}_{t=0}^{T}} \Big\{ \sum_{t=0}^T \beta^{T-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
+&= \min_{u_T \in \hat{C}} \Big\{  \beta^{0}\E[L(u_T|y_T, u_{T-1})] + \min_{\{u_t\}_{t=0}^{T-1}} \beta \sum_{t=0}^{T-1} \beta^{T-1-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
+&= \min_{u_T \in \hat{C}} \Big\{  \E[L(u_T|y_T, u_{T-1})] + \beta V(y_{T-1})\Big\} \label{eqn:bellman}
+\end{align}
+
+From this we see that the system will either make the decision $u_T = c \in \bar{C}$ that minimizes the expected loss over the sequence or it will refuse to predict, equivalent to choosing $u_T = C+1$. Let $c = \argmin_{c\in \bar{C}} \big\{ \E[L(C+1|y_T, u_{T-1})] + \beta V(y_{T-1})\big\}$.
+
+\begin{equation}
+u_T = 
+\begin{cases}
+C+1 &  \text{if } \E[L(C+1|y_T, u_{T-1})] + \beta V(y_{T-1}) <   \E[L(c|y_T, u_{T-1})] + \beta V(y_{T-1})\\
+c \in \bar{C} & \text{otherwise}
+\end{cases}
+\end{equation}
+
+Since $ \beta V(y_{T-1})$ is the same value in both cases, this condition reduces to choosing $C+1$ if  $\E[L(C+1|y_T, u_{T-1})] <   \E[L(c|y_T, u_{T-1})] $ or equivalently, assuming $ \E[L(c|y_T, u_{T-1})]  > 0$, i.e.\ that $S^{(T)}_{c,j} \geq \forall j \in \bar{C}$ and that $ S^{(T)}_{c,j}  >0 $ for some $j \in \bar{C}$,
+
+\begin{equation}
+u_T = 
+\begin{cases}
+C+1 &  \text{if } \frac{\E[L(C+1|y_T, u_{T-1})]}{\E[L(c|y_T, u_{T-1})]} < 1\\
+c \in \bar{C} & \text{otherwise}
+\end{cases}
+\end{equation}
+
+
+\subsection{Dynamic Programming}
+
+% Implementing dynamic programming to solve Bellman equations
+Define a matrix $V \in \R^{C+1\times T}$ where each entry is defined as
+\begin{align}
+V_{i,t} &=  \E[L(u_t=i|y_t, u_{t-1}=\argmin_{k} V_{k,t-1})] + \beta \min_{k\in\hat{C}} V_{k,t-1}\\
+&= \sum_{j \in \bar{C}} S_{i,j}^{(t)} P(y_t=j)P(i|u_{t-1}=\argmin_{k\in\hat{C}} V_{k,t-1}) + \beta \min_k V_{k,t-1}
+ \label{eqn:dp_step}
+\end{align}
+
+% initialize the model at time 0
+At time $t=0$, we do not have any history of observations or decisions, so we initialize our decision process with $V_{i,0}$ as the expected loss of making decision $i$
+\begin{align}
+V_{i,0} &=  \E[L(u_0=i|y_0, \emptyset)] \\
+%&= \sum_{i \in \hat{C}} \sum_{j \in \bar{C}} S_{i,j}^{(0)} P(y_0=j)P(u_0=i)\I(u_0=i) \\
+&=  \sum_{j \in \bar{C}} S_{i,j}^{(0)} P(y_0=j)P(u_0=i)\label{eqn:dp_init}
+\end{align}
+
+
+In order to find the optimal decision at time $T$, we initialize our model at time $t=0$ as shown in (\ref{eqn:dp_init})and then for each possible class $i$, we compute the value of $V_{i,t+1}$ at the next time step as shown in (\ref{eqn:dp_step}). We iteratively continue the process until we reach the current time point $t=T$. We then make decision $u_T = \argmin_{i \in \hat{C}} V_{i, T}$, which is the decision at time $T$ that minimizes the expected loss over the observed period. For the purpose of computational efficiency, we only need to maintain the previous column $V_{1\ldots C+1, t-1}$ in order to calculate the values of $V_{1\ldots C+1, t}$ at the current time point. If we want to learn a decision policy over the entire time sequence, we simply maintain a vector $U = [u_0, \ldots, u_T]$, where $u_t =  \argmin_{i \in \hat{C}} V_{i, t}$.
+
+At each time step we perform $(C+1)(4C)$ operations, so the total complexity is $O(TC^2)$. Assuming that we remember the values computed at the previous time step, the update for each new observation is $O(C^2)$.
+
+
+The preceding update assumes that we cannot retroactively update our decisions even if doing so might allow us to make a lower-cost decision at the current time. If we instead allow our system to reinterpret past decisions in order to minimize the expected loss at the current time, the initialization of the dynamic programming algorithm remains the same, but the update is instead minimized over all possible previous decisions (\ref{eqn:dp_step2}). The complexity for each new observation then becomes $O(TC^3)$, because each new observation now requires $(C+1)(C+1)(4C)$ operations. Moreover, we need to maintain a matrix of the decisions $u_{t-1}$ that minimized the expected loss at the next time step. Once we reach the current time $T$ we can backtrack through this matrix to see the sequence of decisions that led to the optimal decision at time $T$. 
+
+\begin{align}
+V_{i,t} &= \min_{u_{t-1} \in \hat{C}} \big\{ \E[L(u_t=i|y_t, u_{t-1})] + \beta V_{u_{t-1},t-1}\big\}\\
+&=  \min_{u_{t-1} \in \hat{C}} \big\{  \sum_{j \in \bar{C}} S_{i,j}^{(t)} P(y_t=j)P(i|u_{t-1}) + \beta V_{u_{t-1},t-1}\big\}
+ \label{eqn:dp_step2}
+\end{align}
+
+
+
+
+\subsection{CRF Derivation}
+
+The input to the reliable classifier is a sequence of distributions over predicted class labels $Y = y_0, y_1, \ldots, y_T$, where each $y_t$ is a probability distribution over the possible classes $\{1,\ldots,C\}$ given the previous distribution $y_{t-1}$ and the observations up to time $t$. We explore a CRF framework for learning this predicted distribution at each time step.
+
+At each node $y_t$ we have the node potential $P(y_t|X)$ and the edge potential $P(y_t, y_{t-1})$. We assume that the univariate potential $P(y_t|X)$ is given from the output of an SVM or other classifier. We can then take these univariate potentials and chain them into a CRF in order to incorporate information about temporal dynamics. For all pairs of classes $i,j \in \{1,\ldots,C\}$ we define a feature function $f_{i,j} = \mathbb{1}(y_{t-1}=i, y_{t}=j)$ and learn a corresponding weight $\lambda_{i,j}$. Here we have defined $\lambda_{i,j} = P(y_{t-1} = i,y_t=j)$ for $t >1$ and $\lambda_{i,j} = P(y_t=j)$ for $t =1$.
+
+We then use the forward algorithm to compute the probability the probability of a class label $j$ given the observations up to the current time $t$ and the sequence of previous label distributions, $P(y_t =j| Y_{1:t-1}, X_{1:t}) $ for each $j \in \bar{C}$. We start by initializing $\alpha_{1,j} = P(y_1=j)P(y_1=j|x_1)$. We then compute $\alpha_{2:T}$ by recursively computing $\alpha_{t,j} = \sum_{i \in \bar{C}}\alpha_{t-1,i}P(y_t=j|X_{1:t})P(y_{t-1} = i,y_t=j)$. For $t=1,\ldots, T$, we compute $P(y_t =j| Y_{1:t-1}, X_{1:t}) $ as in (\ref{eqn:crf_inference}).
+
+\begin{equation}
+P(y_t=j | Y_{1:t-1}, X_{1:t}) = \frac{\alpha_{t,j}}{\sum_{j \in \bar{C}}\alpha_{t,j}} \label{eqn:crf_inference}
+\end{equation}
+ 
+Once we have $\alpha_{t,j} $, if we add a new observation $x_{t+1}$, we can easily compute $P(y_{t+1}=j | Y_{1:t}, X_{1:t+1})$ using (\ref{eqn:crf_inference}).
+
+\subsection{Simulation with synthetic data}
+
+We define four classes, where the data from each class is sampled from a Gaussian with means 0,3,6,8 and variances 3,3,2,1 respectively. Each sample is 100 time steps long and there are 1000 samples. At each time step the sample is drawn from one of the four classes and the sample transitions between classes based on a given transition matrix and initial probabilities.
+
+We use a 2DBN implemented with Kevin Murphy's BayesNet Toolbox for Matlab to calculate the marginal probabilities. Since we focus on learning the decision policy rather than the probability estimation task, we provide the 2DBN with the transition matrix, class-specific Gaussians, and initial probabilities used to generate the data.
+
+We also calculate the distributions over classes conditioned on the observations using the above CRF derivation. Since we know the four distributions that the data is drawn from, we define four feature functions $f_j(y) = \one(y=j)$ for $j \in \bar{C}$ with respective weights $\lambda_j = P(x | \mu_j, \Sigma_j)$ with a normal PDF.  We also have feature functions for each possible pair of classes $i,j \in \bar{C}$ where  $f_{i,j} = \one(y_{t-1}=i,y_t=j)$ and $\lambda_{i,j} = Ti,j$, the value from the transition matrix.
+
+In order to test the reliable classification, we generate synthetic data from four overlapping Gaussians, where each Gaussian corresponds to a different class.
+
+We use Kevin Murphy's BayesNet and CRF Matlab toolkits to implement a model to compute $\hat{Y}$ for the synthetic data. We then use these marginal probabilities at each time step to implement the learning problem as described below. For the simulation we do address the situation where we have a doctor intervention (i.e.\ $R=\emptyset$). 
+
+We will consider how different parameterizations of the cost matrix allow us to trade off between the cost of misclassification and the cost of refusing to predict. We will also investigate how to set the cost matrix to encourage early detection.
+
+\subsection{Learning Problem}
+Our goal is to learn a decision policy that allows us to minimize the expected loss over the entire time sequence of observations.
+The expected posterior loss at time $t$ of making decision $u_t=i$ given that the true label is $y_t=j$ and the previous decision was $u_{t-1}=h$ as follows:
+
+\begin{align}
+\E[L(u_t|y_t, u_{t-1})] &= \min_{u_t} \Big\{ \sum_{i \in \hat{C}} \sum_{j \in \bar{C}} S_{i,j}^{(t)} P(y_t=j)P(u_t=i|u_{t-1})\I(u_t=i)\Big\}\\
+&= \min_{u_t \in \hat{C}} \Big\{ \sum_{j \in \bar{C}} S_{u_t,j}^{(t)} P(y_t=j)P(u_t|u_{t-1})\Big\}
+\label{eqn:exploss}
+\end{align}
+
+We use dynamic programming to learn the optimal decision policy over the time sequence, with a discounting factor $\beta \in [0,1]$ to adjust the importance of past observations.
+
+Let $V(y_T)$ be the value of the expected posterior loss minimized by a decision policy $\{u_t\}_{t=0}^{T}$. At time $T$ we make the decision $u_T$ that is the argmin of (\ref{eqn:bellman}).
+
+\begin{align}
+V(y_T) &= \min_{\{u_t\}_{t=0}^{T}} \Big\{ \sum_{t=0}^T \beta^{T-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
+&= \min_{u_T \in \hat{C}} \Big\{  \beta^{0}\E[L(u_T|y_T, u_{T-1})] + \min_{\{u_t\}_{t=0}^{T-1}} \beta \sum_{t=0}^{T-1} \beta^{T-1-t}\E[L(u_t|y_t, u_{t-1})] \Big\}\\
+&= \min_{u_T \in \hat{C}} \Big\{  \E[L(u_T|y_T, u_{T-1})] + \beta V(y_{T-1})\Big\} \label{eqn:bellman}
+\end{align}
+
+From this we see that the system will either make the decision $u_T = c \in \bar{C}$ that minimizes the expected loss over the sequence or it will refuse to predict, equivalent to choosing $u_T = C+1$. 
+
+Computing the expected loss with dynamic programming, where we maintain a vector of the class costs from the previous time step, requires $C(C+1)+4$ operations at each time point, so the overall complexity is $O(TC^2)$. For space efficiency, it is only necessary to maintain the cost vector from the previous time step.
+
+
+
+\subsection{Cost Matrix}
+Define the cost matrix $S^{(t)}_{i,j}$ to be $0/1$ loss where $S^{(t)}_{i,j} = 1$ if $i =j$ and $0 otherwise$ for $i,j \in \{1\ldots C\}$ and define $S^{(T)}_{C+1,j} = \alpha $ $\forall j \in \bar{C}$, $\alpha \in (0,1]$.
+In the case where we have a uniform cost of refusing to predict, $S^{(T)}_{C+1,j} = \alpha $ $\forall j \in \bar{C}$, we will refuse to predict if the following relationship holds
+\begin{align}
+\frac{\E[L(C+1|y_T, u_{T-1})]}{\E[L(c|y_T, u_{T-1})]} &< 1\\
+\frac{\sum_{j \in \bar{C}} S_{C+1,j}^{(T)} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &< 1\\
+\frac{\alpha\sum_{j \in \bar{C}} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &< 1\\
+\frac{\sum_{j \in \bar{C}} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &< \frac{1}{\alpha}\\
+\frac{\sum_{j \in \bar{C}} P(y_T=j)P(C+1|u_{T-1})}{\sum_{j \in \bar{C}} S_{c,j}^{(T)} P(y_T=j)P(c|u_{t-1})} &\geq \alpha
+\end{align}
+
+We then look at the total loss, accuracy, error, and refusal rate over the dataset as a function of $\alpha$. We will also look at it where we only vary $\alpha$ for a single class.
+
+\subsection{Evaluation}
+If we have a decision policy without a notion of refusing to predict, then ideal behavior of our decision policy with rejection is to refuse to predict whenever the previous decision policy made an incorrect classification and to predict the same class whenever it made a correct prediction. In order to evaluate different settings of the cost matrix and other parameters, we compare the fraction of mistakes that are rejection in the decision policy with rejection and the fraction of correct classifications that are correctly classified. Since we use the same policy for choosing the best cost class among the classes for both the decision policy with and without rejection, there will not be mistakes that become correct answers in the new model and there will not be correct answers that become incorrect. 
+
+\subsection{Septic Shock Early Detection}
+
+% TASK DESCRIPTION
+We apply our method to the task of early prediction of septic shock. We are given the output from an SVM that predicts whether or not a person has septic shock and has a corresponding label: not septic shock, yes septic shock, and uncertain. A patient is labeled as having septic shock based on when a doctor records it in the EMR. However, this provides a noisy label since it does not denote the true onset of septic shock, but rather when a doctor treated the patient for septic shock. Moreover, developing septic shock is a gradual process and is challenging to identify the precise moment of septic shock onset. In order to account for this, the twelve hours preceding the documented septic shock onset are labeled as uncertain. A patient may also be labeled as uncertain if there are confounding factors that prevent us from knowing whether or not they developed septic shock. For instance, the caregiver may decide to proactively administer antibiotics before confirming that a patient has fully developed septic shock. If the patient does not subsequently develop septic shock, then it is unknown whether the patient never would have developed septic shock or whether they were going into septic shock, but the medical intervention stopped the progression to septic shock. 
+
+We use a sigmoid function $S(x) = \frac{1}{1+e^-x}$ to map the values output from the SVM to the range $[0,1]$ and interpret this as a univariate potential that a patient has septic shock at that time. Let $\pi_t$ represent the univariate potential at time $t$.
+
+Let $H$ denote healthy/not septic shock and let $K$ denote septic shock. There are four possible class sequences $(y_{t-1},y_t)$ that occur in the dataset: $(H,H), (H,K), (K,H), (K,K)$. We define the probability $P(y_{t-1}=H, y_t=K)$ as the fraction of patients who develop septic shock and $P(y_{t-1}=H, y_t=H) = 1 - P(y_{t-1}=H, y_t=K)$. In the dataset we never observe a patient transition from septic shock to not septic shock. Currently we have $P(y_{t-1}=K, y_t=K) = 1$ and  $P(y_{t-1}=K, y_t=H) = 0$.
 
 \section{Discussion and Future Work}
 
