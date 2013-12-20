@@ -279,6 +279,20 @@ One way to capture all of these aspects is to initialize the mean and covariance
 %%%%%%%%
 %% Show before after em states here
 %%%%%%%%%
+\begin{figure}
+        \centering
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{hmm_plots/sirs-6-states-2-iterations.png}
+                \caption{Mean values of states}
+                \label{fig:states_before_train}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.4\textwidth}
+                \includegraphics[width=\textwidth]{hmm_plots/sirs-6-states-20-iterations.png}
+                \caption{Mean Values (20 iterations)}
+                \label{fig:states_after_train}
+        \end{subfigure}
+\caption{Typical change in state means before and after training.}\label{fig:states_comparison}
+\end{figure}
 
 In the figure above (left) we see the means for 6 possible $Pre$ states for the Sirs condition. After 20 iterations of EM over the model we see the states each take on a specific characteristic(above right). 2 of the states represent high heart rate deviations, while 2 other represent low heart rate deviation. The most interesting states are those that capture the interesting changes in the heart rate. The Green line shows a 10 min window where the heart rate deviation is dropping and the purple line captures the opposite trend. With longer time windows it might be possible to capture more interesting patterns in this data.\\
 
@@ -293,6 +307,12 @@ A unseen development data set was created. Each condition model model that was t
 %%%%%%%%%%
 %% insert precision recall plot here
 %%%%%%
+\begin{figure}
+        \centering
+        \includegraphics[width=\textwidth]{hmm_plots/1000prediction.png}
+                \caption{Precision and Recall on unseen data (15 state models, 100 training iterations)}
+                \label{fig:precision_and_recall}
+\end{figure}
 We can see that when small amounts of the observation is shown to each model (< 200 min) there is lot of fluctuation in the prediction. This makes sense because there is not enough data to get a reliable forward probability estimate. There is more chance of a model getting lucky since is just happened to have a state or two that matches closely with the small portion of data seen. We see that as the observations shown to the models increases there is more consistent prediction. Not only is the prediction more consistent, we also see fairly high precision and recall for 2 of the 3 conditions. The prediction of Septic Shock was made with a precision of ~0.7 and a recall of ~0.65, given that this is a three way prediction these represents accuracy substantially above chance. The figure was obtained by using models trained with 15 states and training was truanted at 100 iterations.\\
 
 \subsubsection{Discussion}
